@@ -2,7 +2,9 @@
 
 [![web](https://github.com/Gerlitek/kimallus-peli/actions/workflows/web.yml/badge.svg)](https://github.com/Gerlitek/kimallus-peli/actions/workflows/web.yml)
 
-> **In English:** *Kimallus* ("sparkle" in Finnish) is a small, very pink browser game: a cat rides a unicorn through a sparkly galaxy, jumping over diamonds and rainbows. Vector art drawn in code (Canvas 2D, no game engine), TypeScript, hosted on AWS (CDK). Docs are in Finnish; code and commits in English.
+> **In English:** *Kimallus* ("sparkle" in Finnish) is a small, very pink browser game: a cat rides a unicorn through a sparkly galaxy, jumping over diamonds and rainbows. Vector art drawn in code (Canvas 2D, no game engine), TypeScript, hosted on AWS (CDK). Docs are in Finnish; code and commits in English. *Work in progress: playable locally, AWS deployment coming.*
+
+**Tila:** kehityksessä. Peli toimii paikallisesti (`npm run dev`). AWS-julkaisu osoitteeseen kimallus.gerlitek.fi tulee myöhemmin.
 
 Söpö selainpeli: kissa ratsastaa yksisarvisella pinkissä tähtimaailmassa ja hyppii timanttien ja sateenkaarten yli.
 
