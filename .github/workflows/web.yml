@@ -1,0 +1,39 @@
+# Front: type check, unit tests and production build.
+# Pushes and pull requests only build and test. The AWS deploy (S3 + CloudFront) is added
+# with the CDK stacks: it will run only when the owner starts the workflow by hand on main
+# and approves it in the environment "production".
+name: web
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', 'package.json', 'package-lock.json', '.github/workflows/web.yml']
+  pull_request:
+    paths: ['web/**', 'package.json', 'package-lock.json', '.github/workflows/web.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build # runs tsc --noEmit first
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 7

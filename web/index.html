@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kimallus</title>
+  <meta name="description" content="Ratsasta yksisarvisella pinkissä tähtimaailmassa. Pieni, kimalteleva selainpeli." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://kimallus.gerlitek.fi/" />
+  <meta property="og:title" content="Kimallus" />
+  <meta property="og:description" content="Ratsasta yksisarvisella pinkissä tähtimaailmassa. Pieni, kimalteleva selainpeli." />
+  <meta property="og:locale" content="fi_FI" />
+  <style>
+    /* Page in gerlitek.fi colours (dark, Inter, pink); the game itself stays light pink. */
+    :root {
+      --bg: #0F1115; --surface-1: #151923; --surface-2: #1B2030; --border: #252D3F;
+      --text: #E7E8EA; --text-dim: #A9AFBA;
+      --brand: #E85AA5;  /* gerlitek.fi pink: title, frame and links */
+      --stats: #C9A7FF;  /* lavender from the game: the dashboard link, so a child notices it */
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px;
+      color: var(--text);
+      background:
+        radial-gradient(60% 45% at 0% 0%, rgba(232, 90, 165, 0.16), transparent 70%),
+        radial-gradient(55% 45% at 100% 100%, rgba(232, 90, 165, 0.13), transparent 70%),
+        var(--bg);
+      border-top: 2px solid transparent;
+      border-image: linear-gradient(90deg, transparent, rgba(232, 90, 165, 0.45) 30%, rgba(232, 90, 165, 0.45) 70%, transparent) 1;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    main { width: 100%; max-width: 860px; }
+    /* The logo is the unicorn and the cat, drawn by the game's own code (drawLogo in main.ts). */
+    .title { display: flex; align-items: center; gap: 14px; margin: 0 0 10px; }
+    #logo { width: 72px; height: 72px; flex: none; }
+    h1 { margin: 0 0 2px; font-size: 1.8rem; color: var(--brand); }
+    .title p { margin: 0; color: var(--text-dim); font-size: 0.95rem; }
+    /* Compact on purpose: the instructions must not draw attention away from the game. */
+    .howto { margin: 0 0 12px; padding-left: 18px; color: var(--text-dim); font-size: 0.8rem; line-height: 1.5; columns: 2; column-gap: 28px; }
+    .howto li { break-inside: avoid; }
+    .howto b { color: var(--text); }
+    @media (max-width: 560px) { .howto { columns: 1; } }
+    kbd { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 0.75rem; }
+
+    #game {
+      width: 100%;
+      border: 2px solid var(--border); border-radius: 18px; overflow: hidden; background: #ffc6e6;
+      box-shadow: 0 0 0 1px rgba(232, 90, 165, 0.25), 0 18px 60px -20px rgba(232, 90, 165, 0.35);
+    }
+    /* The frame keeps 16:9 inside the page and, letterboxed, in full screen. */
+    .frame { position: relative; width: 100%; aspect-ratio: 16 / 9; }
+    #game:fullscreen {
+      display: grid; place-items: center; border: 0; border-radius: 0; background: var(--bg);
+    }
+    #game:fullscreen .frame { width: min(100vw, calc(100vh * 16 / 9)); }
+    #game canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
+    #hud {
+      position: absolute; top: 3%; left: 3%; right: 3%;
+      display: flex; justify-content: space-between;
+      font-weight: 800; font-size: clamp(13px, 2.4vw, 22px); font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+      color: #fff; text-shadow: 0 2px 6px rgba(120, 30, 100, 0.5);
+      pointer-events: none;
+    }
+    /* Cards sit right of the unicorn (it stands in the left third), never on its face. */
+    /* The lumen counter: a glowing ball of starlight, like the orbs that fly into it. */
+    .lumens { display: inline-flex; align-items: center; gap: 8px; }
+    .lumen {
+      width: 1.1em; height: 1.1em; border-radius: 50%; display: inline-block;
+      background: radial-gradient(circle, #fff 0 30%, #fff1a8 45%, rgba(255, 194, 230, 0.6) 70%, transparent 72%);
+      box-shadow: 0 0 12px 4px rgba(255, 240, 190, 0.8);
+    }
+    .lumens.pulse .lumen { animation: lumen-pulse 0.25s ease-out; }
+    @keyframes lumen-pulse { 50% { transform: scale(1.45); box-shadow: 0 0 20px 8px rgba(255, 240, 190, 1); } }
+    /* Heart button for touch screens only; elsewhere X or right click shoots. */
+    #shoot {
+      display: none; position: absolute; right: 3%; bottom: 5%;
+      width: clamp(52px, 11vw, 84px); aspect-ratio: 1; border-radius: 50%;
+      border: 3px solid #fff; background: #ff5fa2; color: #fff;
+      font-size: clamp(24px, 5vw, 40px); line-height: 1;
+      box-shadow: 0 6px 20px rgba(200, 40, 120, 0.45); touch-action: none;
+    }
+    @media (hover: none) and (pointer: coarse) { #shoot { display: block; } }
+    #message { position: absolute; inset: 0; padding: 0 4% 0 36%; display: grid; place-items: center; text-align: center; pointer-events: none; }
+    #message .card {
+      color: #4a2259; font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+      background: rgba(255, 255, 255, 0.85); padding: 14px 26px; border-radius: 22px;
+      box-shadow: 0 8px 30px rgba(150, 40, 120, 0.2);
+    }
+    #message h2 { margin: 0 0 6px; font-size: clamp(24px, 5vw, 44px); color: #e0458f; }
+    #message p { margin: 3px 0; font-size: clamp(12px, 1.8vw, 17px); }
+    #message[hidden] { display: none; }
+
+    /* The publisher line is small and faint on purpose, far below the game. */
+    footer {
+      margin-top: 56px; padding-top: 10px; border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 6px;
+      font-size: 0.7rem; color: rgba(169, 175, 186, 0.45);
+    }
+    footer a { color: rgba(232, 90, 165, 0.65); text-decoration: none; }
+    footer a:hover { color: var(--brand); text-decoration: underline; }
+    footer .stats { margin-right: auto; color: rgba(201, 167, 255, 0.7); }
+    footer .stats:hover { color: var(--stats); }
+    footer .code { color: rgba(169, 175, 186, 0.5); }
+    footer .code:hover { color: var(--text-dim); }
+    /* Privacy note: closed by default, small and quiet, but one click away. */
+    .privacy { margin: 10px 0 0 auto; font-size: 0.65rem; color: var(--text-dim); max-width: 60ch; }
+    .privacy summary { cursor: pointer; text-align: right; color: rgba(169, 175, 186, 0.45); }
+    .privacy ul { margin: 6px 0 0; padding-left: 16px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="title">
+      <canvas id="logo" aria-hidden="true"></canvas>
+      <div>
+        <h1>Kimallus</h1>
+        <p>Ratsasta yksisarvisella pinkissä tähtimaailmassa.</p>
+      </div>
+    </div>
+    <ol class="howto">
+      <li><b>Hyppää</b>: <kbd>välilyönti</kbd>, nuoli ylös, hiiren klikkaus tai napautus.</li>
+      <li><b>Korkea hyppy</b>: pidä pohjassa.</li>
+      <li><b>Timantit</b> ylittää lyhyellä hypyllä.</li>
+      <li><b>Sateenkaaret</b> vaativat korkean hypyn.</li>
+      <li><b>Sydän</b>: <kbd>X</kbd> tai hiiren oikea. Osu surulliseen pilveen, niin se ilahtuu.</li>
+      <li><b>Kerää valoa</b>: kuppikakut ja iloiset pilvet antavat lumeneita.</li>
+      <li><b>Kynsilakkapullo</b>: juokse siihen, niin pääset lakkaamaan yksisarvisen kynnet ja saat lisää lumeneita.</li>
+    </ol>
+    <div id="game">
+      <div class="frame">
+        <canvas id="play" aria-label="Kimallus-peli"></canvas>
+        <div id="hud"><span class="lumens" title="Lumenit: kerätty valo"><i class="lumen" aria-hidden="true"></i><span id="score">0</span></span><span id="best"></span></div>
+        <button id="shoot" type="button" aria-label="Ammu sydän">♥</button>
+        <div id="message"></div>
+      </div>
+    </div>
+    <footer>
+      <a class="stats" href="tilastot/">Tilastot</a>
+      <span>Toteutus ja julkaisu</span>
+      <a href="https://gerlitek.fi">Gerlitek Oy</a>
+      <span aria-hidden="true">·</span>
+      <a class="code" href="https://github.com/Gerlitek/kimallus-peli">Lähdekoodi</a>
+    </footer>
+    <details class="privacy">
+      <summary>Tietosuoja</summary>
+      <ul>
+        <li>Selaimeesi tallentuu oma paras tuloksesi. Se pysyy laitteellasi.</li>
+        <li>Peliin ei kirjoiteta omaa nimeä eikä muuta vapaata tekstiä.</li>
+        <li>Peli ei käytä evästeitä, kolmannen osapuolen analytiikkaa eikä mainoksia.</li>
+        <li>Selaimen tiedot saat pois tyhjentämällä sivuston tiedot selaimen asetuksista.</li>
+      </ul>
+    </details>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

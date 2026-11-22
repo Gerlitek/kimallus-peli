@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tilastot · Kimallus</title>
+  <meta name="description" content="Kimallus lukuina: pelikerrat, hypyt ja esteet." />
+  <style>
+    :root {
+      --bg: #0F1115; --surface-1: #151923; --surface-2: #1B2030; --border: #252D3F;
+      --text: #E7E8EA; --text-dim: #A9AFBA; --brand: #E85AA5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 16px; color: var(--text);
+      background:
+        radial-gradient(60% 45% at 0% 0%, rgba(232, 90, 165, 0.16), transparent 70%),
+        radial-gradient(55% 45% at 100% 100%, rgba(232, 90, 165, 0.13), transparent 70%),
+        var(--bg);
+      border-top: 2px solid transparent;
+      border-image: linear-gradient(90deg, transparent, rgba(232, 90, 165, 0.45) 30%, rgba(232, 90, 165, 0.45) 70%, transparent) 1;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 8px 0 4px; }
+    h1 { margin: 0; font-size: 1.6rem; color: var(--brand); }
+    header a { color: var(--text-dim); font-size: 0.85rem; text-decoration: none; }
+    header a:hover { color: var(--brand); }
+    .lead { margin: 0 0 18px; color: var(--text-dim); font-size: 0.85rem; }
+    .status { padding: 24px; text-align: center; color: var(--text-dim); background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Tilastot</h1>
+      <a href="../">← Takaisin peliin</a>
+    </header>
+    <p class="lead">Kimallus lukuina. Luvut lasketaan kerran yössä nimettömistä pelitapahtumista.</p>
+    <div class="status">Tilastot tulevat näkyviin, kun peli on julkaistu ja sitä on pelattu.</div>
+  </main>
+  <script type="module" src="../src/fonts.ts"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+.env
+
+# Private material (specs and the child's ideas). Never committed.
+private/
+
+# Instructions for Claude Code. Personal working notes, kept local.
+CLAUDE.md
+
+# Third-party agent skills, installed locally, not part of the project.
+.agents/
+.claude/
+skills-lock.json
+
+# AWS CDK: local context holds account details; build output is generated.
+cdk.context.json
+cdk.out/
