@@ -70,19 +70,33 @@ Kolme sääntöä pitävät koodin selitettävänä:
 ### Esteet
 | Este | Mekaniikka |
 |---|---|
-| Timantti | perushyppy |
-| Timanttijoki | pitkä hyppy (napin pito) |
-| Sateenkaaripuomi pilvien päällä | korkea hyppy, ajoitus |
-| "Syömään!"-hahmo | yrittää napata jalasta, hyppy oikeaan aikaan |
+| Timantti | lyhyt hyppy |
+| Timanttijoki | matala mutta pitkä, hitaalla nopeudella vaatii pidon |
+| Sateenkaaripuomi pilvien päällä | korkea hyppy, vaatii pidon |
+| "Syömään!"-äiti | kukkamekko ja ruskeat kiharat, vilkuttaa ja pitää ruokakulhoa (kuplassa kulho). Lyhyt hyppy oikeaan aikaan; ohituksen jälkeen kissasta pöllähtää sydämiä |
+
+Jokaisen esteen hyppytyyppi (`jump: 'tap' | 'hold'`) on datassa, ja testi varmistaa, että este ylittyy luvatulla hypyllä sekä hitaimmalla että suurimmalla nopeudella 25 % pelivaralla, koska lapsen ajoitus ei ole täydellinen.
+
+Tunnehetki (`scenes/share-moment.ts`): kuuden kerätyn kuppikakun jälkeen radalle tulee iso hehkuva erikoiskuppikakku nuolen kanssa, kuten kynsilakkapullo. Siihen juoksemalla pääsee jakamaan, yli hyppäämällä sen ohittaa (tulee myöhemmin uudelleen). Kissalla on lautasella kaksi kuppikakkua, tähtiystävän lautanen on tyhjä ja sen ajatuskuplassa on kuppikakku. Kissan kasvot ja tunnepilvi ovat surulliset, nuoli kehottaa antamaan. Napautuksella toinen kuppikakku lentää kaarena ystävän lautaselle, molemmat syövät kolmella haukulla ja ilahtuvat (+15 kimallusta). Tarkoituksella rauhallinen: ei taustavälkkeitä eikä räjähdyksiä. Kerran pelikerrassa.
+
+Kynsien lakkaus: valmiin kavion jälkeen yksisarvinen pomppaa ja kavioon ilmestyy sydän- tai tähtitarra. Kun kaikki neljä on lakattu, yksisarvinen tanssii ja kimallusta sataa.
+
+Aloitus ja jatkaminen: ei kehotekuvia. Aloitusnäkymässä yksisarvinen pomppii, ja peli alkaa mistä tahansa painalluksesta. Tunnehetket jatkuvat itsestään. Aikuisten vihje pienenä pelialueen alareunassa.
 
 Sydämet: kissa ampuu hännästä sydämiä (X, hiiren oikea tai kosketusnäytön sydännappi) viistosti ylös. Taivaalla leijuu surullisia harmaita pilviä. Osuma muuttaa pilven iloiseksi (hymy, sydänsilmät, halaus tai tähtisilmät), ja se leijuu pois. Säännöt `logic/hearts.ts`.
 
 Kuppikakut: kaarena esteen yllä (kerätään hyppäämällä yli) tai rivinä maassa. Päällä vuorotellen sydän tai tähti. Säännöt `logic/cupcakes.ts`.
 
-### Lumenit (pisteet)
-Pisteyksikkö on lumen, valon yksikkö. Kun pelaaja saa lumeneita, kohteesta pöllähtää tähtivalopalloja, jotka lentävät laskuriin, ja laskurin hehkuva kuvake sykähtää.
+### Kuvat ensin
+Pelaajat ovat pieniä lapsia, jotka eivät vielä lue. Pelin sisällä asiat kerrotaan ilmeillä ja kuvilla: surullinen ja iloinen kasvo, ajatuskupla, nuoli, iso ▶-nappi, ruokakulho. Tekstiä on vain aloitussivun ohjeissa vanhemmille ja pienenä vihjeenä korteissa.
 
-| Lähde | Lumenia |
+### Rauhallinen ja turvallinen
+Pieni lapsi pelaa: ruudulla tapahtuu vähän kerrallaan. Ei nopeaa välkkymistä, kaikki kirkkauden muutokset ovat hitaita. Teema näkyy silti: pulleat pastellitähdet, pehmeästi tuikkivat kimallukset ja vähän hiljaa leijuvaa glitteriä. Esteiden väli 1,6–2,6 s, pilviä 5–8 s välein, valopalloja enintään 3 kerrallaan. Ei kehotteita painaa: peli alkaa mistä tahansa painalluksesta, ja tunnehetket jatkuvat itsestään.
+
+### Kimallus (pisteet)
+Pisteitä kutsutaan tekstissä kimallukseksi ("+15 kimallusta"). Pelissä ne näkyvät hehkuvina valopalloina (koodissa lumen, valon yksikkö), jotka lentävät laskuriin, ja laskurin kuvake sykähtää. Sana lumen ei näy pelaajalle ilman selitystä.
+
+| Lähde | Kimallusta |
 |---|---|
 | Matka | 1 per 200 px (noin 2 sekunnissa) |
 | Kuppikakku | 5 |

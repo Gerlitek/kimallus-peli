@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kimallus</title>
-  <meta name="description" content="Ratsasta yksisarvisella pinkissä tähtimaailmassa. Pieni, kimalteleva selainpeli." />
+  <meta name="description" content="Hypi yksisarvisella pinkissä tähtimaailmassa. Pieni, kimalteleva selainpeli." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kimallus.gerlitek.fi/" />
   <meta property="og:title" content="Kimallus" />
-  <meta property="og:description" content="Ratsasta yksisarvisella pinkissä tähtimaailmassa. Pieni, kimalteleva selainpeli." />
+  <meta property="og:description" content="Hypi yksisarvisella pinkissä tähtimaailmassa. Pieni, kimalteleva selainpeli." />
   <meta property="og:locale" content="fi_FI" />
   <style>
     /* Page in gerlitek.fi colours (dark, Inter, pink); the game itself stays light pink. */
@@ -90,6 +90,17 @@
     #message h2 { margin: 0 0 6px; font-size: clamp(24px, 5vw, 44px); color: #e0458f; }
     #message p { margin: 3px 0; font-size: clamp(12px, 1.8vw, 17px); }
     #message[hidden] { display: none; }
+    /* Picture cards: a big play button and the sparkle collected, no reading needed. */
+    #message .card.icon { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 26px; }
+    /* Grown-ups' hint: small and far from the tap prompt, at the bottom edge of the game. */
+    #message .adult-hint {
+      position: absolute; left: 0; right: 0; bottom: 3%; margin: 0; text-align: center;
+      font-size: clamp(10px, 1.4vw, 13px); color: #fff; opacity: 0.8;
+      text-shadow: 0 1px 3px rgba(120, 30, 100, 0.5);
+    }
+    .score-big { display: flex; align-items: center; gap: 12px; font-size: clamp(30px, 6vw, 56px); font-weight: 800; color: #e0458f; }
+    .score-big .lumen { width: 0.8em; height: 0.8em; }
+    .record { color: #ffc94a; text-shadow: 0 0 12px rgba(255, 220, 120, 0.9); }
 
     /* The publisher line is small and faint on purpose, far below the game. */
     footer {
@@ -115,22 +126,23 @@
       <canvas id="logo" aria-hidden="true"></canvas>
       <div>
         <h1>Kimallus</h1>
-        <p>Ratsasta yksisarvisella pinkissä tähtimaailmassa.</p>
+        <p>Hypi yksisarvisella pinkissä tähtimaailmassa.</p>
       </div>
     </div>
     <ol class="howto">
       <li><b>Hyppää</b>: <kbd>välilyönti</kbd>, nuoli ylös, hiiren klikkaus tai napautus.</li>
       <li><b>Korkea hyppy</b>: pidä pohjassa.</li>
       <li><b>Timantit</b> ylittää lyhyellä hypyllä.</li>
-      <li><b>Sateenkaaret</b> vaativat korkean hypyn.</li>
+      <li><b>Sateenkaaret ja timanttijoki</b> vaativat pitkän hypyn.</li>
+      <li><b>Syömään!</b> Hyppää ajoissa, ettei leikki lopu.</li>
       <li><b>Sydän</b>: <kbd>X</kbd> tai hiiren oikea. Osu surulliseen pilveen, niin se ilahtuu.</li>
-      <li><b>Kerää valoa</b>: kuppikakut ja iloiset pilvet antavat lumeneita.</li>
-      <li><b>Kynsilakkapullo</b>: juokse siihen, niin pääset lakkaamaan yksisarvisen kynnet ja saat lisää lumeneita.</li>
+      <li><b>Kerää kimallusta</b>: kuppikakut ja iloiset pilvet antavat valopalloja.</li>
+      <li><b>Kynsilakkapullo</b>: juokse siihen, niin pääset lakkaamaan yksisarvisen kynnet ja saat lisää kimallusta.</li>
     </ol>
     <div id="game">
       <div class="frame">
         <canvas id="play" aria-label="Kimallus-peli"></canvas>
-        <div id="hud"><span class="lumens" title="Lumenit: kerätty valo"><i class="lumen" aria-hidden="true"></i><span id="score">0</span></span><span id="best"></span></div>
+        <div id="hud"><span class="lumens" title="Kimallusta kerätty (valopallot eli lumenit)"><i class="lumen" aria-hidden="true"></i><span id="score">0</span></span><span id="best"></span></div>
         <button id="shoot" type="button" aria-label="Ammu sydän">♥</button>
         <div id="message"></div>
       </div>

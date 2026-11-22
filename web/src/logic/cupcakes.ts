@@ -17,8 +17,23 @@ export const ROW: readonly Spot[] = [
   { dx: 96, h: 4 },
 ];
 
-/** An arc over an obstacle, centred on it: collected by jumping over at the right moment. */
+/** An arc of at most three over an obstacle, centred on it: collected by jumping over at the right moment. */
 export function arcOver(kind: ObstacleKind): readonly Spot[] {
+  if (kind === 'river') {
+    // Along the long jump over the river
+    return [
+      { dx: -60, h: 100 },
+      { dx: 0, h: 130 },
+      { dx: 60, h: 100 },
+    ];
+  }
+  if (kind === 'mom') {
+    return [
+      { dx: -55, h: 95 },
+      { dx: 0, h: 130 },
+      { dx: 55, h: 95 },
+    ];
+  }
   if (kind === 'rainbow') {
     // Above the rainbow bar: only a held, high jump reaches them.
     return [
@@ -28,11 +43,9 @@ export function arcOver(kind: ObstacleKind): readonly Spot[] {
     ];
   }
   return [
-    { dx: -70, h: 70 },
-    { dx: -35, h: 100 },
+    { dx: -45, h: 85 },
     { dx: 0, h: 112 },
-    { dx: 35, h: 100 },
-    { dx: 70, h: 70 },
+    { dx: 45, h: 85 },
   ];
 }
 
@@ -41,7 +54,7 @@ export type CupcakePlan = 'none' | 'arc' | 'row';
 /** What to place with a new obstacle: an arc over it, a row after it, or nothing. */
 export function planCupcakes(rng: Rng): CupcakePlan {
   const r = rng();
-  if (r < 0.4) return 'arc';
-  if (r < 0.7) return 'row';
+  if (r < 0.35) return 'arc';
+  if (r < 0.55) return 'row';
   return 'none';
 }

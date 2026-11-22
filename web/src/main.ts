@@ -52,7 +52,7 @@ const input = new Input(canvas, WIDTH, HEIGHT, document.querySelector<HTMLElemen
 const lumensEl = document.querySelector<HTMLElement>('.lumens')!;
 const scene: Scene = new RideScene({
   score: (v) => (scoreEl.textContent = `${v}`),
-  best: (v) => (bestEl.textContent = v > 0 ? `Paras ${v}` : ''),
+  best: (v) => (bestEl.textContent = v > 0 ? `★ ${v}` : ''),
   pulse: () => {
     // Restart the CSS animation for each arriving orb.
     lumensEl.classList.remove('pulse');

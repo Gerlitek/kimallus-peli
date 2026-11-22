@@ -1,9 +1,9 @@
-export const START_SPEED = 380;
-export const MAX_SPEED = 650;
+export const START_SPEED = 300;
+export const MAX_SPEED = 500;
 
 /** Running speed in pixels per second after t seconds. */
 export function speedAt(t: number): number {
-  return Math.min(MAX_SPEED, START_SPEED + 8 * t);
+  return Math.min(MAX_SPEED, START_SPEED + 4 * t);
 }
 
 /**

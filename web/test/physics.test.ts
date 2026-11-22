@@ -57,6 +57,23 @@ describe('obstacles are fair', () => {
     expect(timeAbove(jump(0), diamond.hit.h)).toBeGreaterThan(needed(diamond.hit.w));
   });
 
+  // Every obstacle can be cleared at every speed with the jump it promises,
+  // with room to spare: a child's timing is not perfect.
+  const SLACK = 1.25;
+  for (const o of OBSTACLES) {
+    for (const speed of [START_SPEED, MAX_SPEED]) {
+      it(`${o.kind} is cleared with a ${o.jump} at ${speed} px/s, with slack for timing`, () => {
+        const jumpTime = o.jump === 'tap' ? 0 : 1;
+        expect(timeAbove(jump(jumpTime), o.hit.h)).toBeGreaterThan(needed(o.hit.w, speed) * SLACK);
+      });
+    }
+    if (o.jump === 'hold') {
+      it(`${o.kind} needs more than a tap at the slowest speed`, () => {
+        expect(timeAbove(jump(0), o.hit.h)).toBeLessThan(needed(o.hit.w, START_SPEED));
+      });
+    }
+  }
+
   it('a tap does not clear a rainbow at any speed', () => {
     expect(timeAbove(jump(0), rainbow.hit.h)).toBeLessThan(needed(rainbow.hit.w, MAX_SPEED));
   });

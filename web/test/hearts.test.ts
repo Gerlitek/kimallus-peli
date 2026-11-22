@@ -68,9 +68,14 @@ describe('cupcakes', () => {
   it('the top of each arc is reachable: a tap for diamonds, a held jump for rainbows', () => {
     // The rider's 60 px tall box must reach a cupcake's bottom edge.
     const reach = (jumpPeak: number) => jumpPeak + 60;
-    const top = (kind: 'diamond' | 'rainbow') => Math.max(...arcOver(kind).map((s) => s.h));
-    expect(top('diamond')).toBeLessThan(reach(peak(0)));
-    expect(top('rainbow')).toBeLessThan(reach(peak(1)));
+    for (const o of OBSTACLES) {
+      const top = Math.max(...arcOver(o.kind).map((s) => s.h));
+      expect(top, o.kind).toBeLessThan(reach(peak(o.jump === 'tap' ? 0 : 1)));
+    }
+  });
+
+  it('arcs have at most three cupcakes', () => {
+    for (const o of OBSTACLES) expect(arcOver(o.kind).length).toBeLessThanOrEqual(3);
   });
 
   it('ground rows are collected just by running', () => {

@@ -1,6 +1,8 @@
 import { drawBottle, drawBrush, fillPolish } from '../art/nails';
 import { PALETTE as C } from '../art/palette';
-import { blob, heart } from '../art/shapes';
+import { blob, heart, softStar } from '../art/shapes';
+import { drawTwinkle } from '../art/sparkle';
+import { drawDownArrow, drawMomentBackground } from '../art/ui';
 import { drawUnicorn, hoofOnScreen, type HoofBox, type UnicornPose } from '../art/unicorn';
 import { POLISHES } from '../data/polishes';
 import { bareNails, cycle, isComplete, nextBare, paint, type Nails } from '../logic/nails';
@@ -26,7 +28,6 @@ const POSE_BASE = {
 const BOTTLE_BOTTOM = 508;
 const BOTTLE_X = POLISHES.map((_, i) => WIDTH / 2 + (i - (POLISHES.length - 1) / 2) * 96);
 const PAINT_TIME = 0.75;
-const FONT = 'ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif';
 
 export interface StationHud {
   message(html: string | null): void;
@@ -37,7 +38,6 @@ export interface StationHud {
 interface Floater {
   x: number;
   y: number;
-  text: string;
   life: number;
 }
 
@@ -54,7 +54,11 @@ export class NailStation {
   private floaters: Floater[] = [];
   private readonly sparkles = new Particles(120);
   private doneTime = -1;
-  private earned = 0;
+  /** When the unicorn last hopped for joy (a hoof was finished). */
+  private hopAt = -10;
+  /** When each hoof got its sticker, or -1. */
+  private stickerAt = [-1, -1, -1, -1];
+  private rainTimer = 0;
 
   constructor(private readonly rng: Rng, private readonly hud: StationHud) {
     hud.message(null);
@@ -65,14 +69,49 @@ export class NailStation {
     return this.nails;
   }
 
+  /** The unicorn hops after each finished hoof and dances when all four are done. */
   private pose(): UnicornPose {
-    return { ...POSE_BASE, t: this.time, hoof: (ctx, path, box, i) => this.drawHoof(ctx, path, box, i) };
+    const since = this.time - this.hopAt;
+    let hop = since < 0.5 ? Math.sin((since / 0.5) * Math.PI) * 30 : 0;
+    let squash = since >= 0.5 && since < 0.7 ? 1 - (since - 0.5) / 0.2 : 0;
+    if (this.doneTime >= 0) {
+      const beat = Math.abs(Math.sin(this.time * 6));
+      hop = beat * 24;
+      squash = beat < 0.25 ? 1 - beat * 4 : 0;
+    }
+    return {
+      ...POSE_BASE,
+      y: POSE_BASE.y - hop,
+      sx: 1 + squash * 0.08,
+      sy: 1 - squash * 0.08,
+      t: this.time,
+      hoof: (ctx, path, box, i) => this.drawHoof(ctx, path, box, i),
+    };
   }
 
   /** Returns true when the player is done and the ride should continue. */
   update(dt: number, input: Input): boolean {
     this.time += dt;
+    const before = this.progress;
     this.progress = this.progress.map((p) => Math.min(1, p + dt / PAINT_TIME));
+    // A hoof just finished: hop for joy and pop a sticker on it.
+    this.progress.forEach((p, i) => {
+      if (before[i] < 1 && p >= 1) {
+        this.hopAt = this.time;
+        this.stickerAt[i] = this.time;
+        const h = hoofOnScreen(this.pose(), i);
+        for (let k = 0; k < 14; k++) this.sparkles.emit(h.x, h.y - 10, this.rng, { spread: 40, speed: 150, size: 7 });
+        this.floaters.push({ x: h.x, y: h.y - 50, life: 1.2 });
+      }
+    });
+    if (this.doneTime >= 0) {
+      // Sparkle rain while the unicorn dances
+      this.rainTimer -= dt;
+      if (this.rainTimer <= 0) {
+        this.rainTimer = 0.06;
+        this.sparkles.emit(60 + this.rng() * (WIDTH - 120), 20, this.rng, { spread: 10, speed: 40, size: 8, life: 1.6 });
+      }
+    }
     this.floaters = this.floaters.map((f) => ({ ...f, y: f.y - 40 * dt, life: f.life - dt })).filter((f) => f.life > 0);
     this.sparkles.update(dt, 0);
 
@@ -82,11 +121,8 @@ export class NailStation {
 
     if (this.doneTime >= 0) {
       this.doneTime += dt;
-      if (this.doneTime > 0.9 && pressed) {
-        this.hud.message(null);
-        return true;
-      }
-      return false;
+      // Continues by itself after the little dance: nothing to press.
+      return this.doneTime > 2.4;
     }
 
     for (const k of keys) {
@@ -117,17 +153,10 @@ export class NailStation {
     this.progress[index] = 0;
     const h = hoofOnScreen(this.pose(), index);
     for (let i = 0; i < 12; i++) this.sparkles.emit(h.x, h.y, this.rng, { spread: 50, speed: 110, size: 6 });
-    if (result.points > 0) {
-      this.earned += result.points;
-      this.hud.addPoints(result.points);
-      this.floaters.push({ x: h.x, y: h.y - 40, text: `+${result.points}`, life: 1.2 });
-    }
+    if (result.points > 0) this.hud.addPoints(result.points);
     if (isComplete(this.nails)) {
       this.doneTime = 0;
       for (let i = 0; i < 40; i++) this.sparkles.emit(POSE_BASE.x, 250, this.rng, { spread: 380, speed: 160, size: 8, life: 1.4 });
-      this.hud.message(
-        `<div class="card"><h2>Ihanat kynnet!</h2><p>Yksisarvinen on tosi iloinen.</p><p>+${this.earned} lumenia</p><p>Jatka matkaa välilyönnillä tai napauttamalla.</p></div>`,
-      );
     }
   }
 
@@ -155,22 +184,31 @@ export class NailStation {
     ctx.strokeStyle = 'rgba(255,255,255,0.8)';
     ctx.lineWidth = 0.9;
     ctx.stroke(path);
+
+    // A sticker pops onto each finished hoof: hearts and stars take turns.
+    const at = this.stickerAt[i];
+    if (at >= 0) {
+      const k = Math.min(1, (this.time - at) / 0.25);
+      const pop = k < 1 ? k * 1.3 : 1 + Math.sin((this.time - at) * 4) * 0.05;
+      const cx = box.x + box.w / 2;
+      const cy = box.y + box.h / 2;
+      const r = box.h * 0.24 * pop;
+      ctx.fillStyle = '#ffffff';
+      if (i % 2 === 0) {
+        ctx.fill(heart(cx, cy, r * 1.15));
+        ctx.fillStyle = C.heart;
+        ctx.fill(heart(cx, cy, r * 0.8));
+      } else {
+        ctx.fill(softStar(cx, cy, r * 1.3, r * 0.6));
+        ctx.fillStyle = '#ffc94a';
+        ctx.fill(softStar(cx, cy, r * 0.95, r * 0.42));
+      }
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
     const t = this.time;
-    // Soft veil over the paused ride
-    ctx.fillStyle = 'rgba(255, 236, 248, 0.9)';
-    ctx.fillRect(0, 0, WIDTH, 540);
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#e0458f';
-    ctx.font = `800 32px ${FONT}`;
-    ctx.fillText('Kynsien lakkaus', 28, 48);
-    ctx.fillStyle = '#7a4a8a';
-    ctx.font = `600 15px ${FONT}`;
-    ctx.fillText('Valitse lakka ja napauta yksisarvisen kaviota.', 28, 74);
-    ctx.fillText('Näppäimistöllä nuolet ja välilyönti.', 28, 94);
+    drawMomentBackground(ctx, WIDTH, 540, t, (x, y, k) => drawTwinkle(ctx, x, y, 8, k * k * k));
 
     // Cushion under the hooves
     ctx.fillStyle = '#ffc2e3';
@@ -202,24 +240,24 @@ export class NailStation {
         ctx.fillStyle = glow;
         ctx.fillRect(x - 60, BOTTLE_BOTTOM - 96, 120, 120);
       }
-      const lift = chosen ? 8 + Math.sin(t * 4) * 2 : 0;
+      // Every bottle bobs a little; the chosen one is lifted higher.
+      const lift = (chosen ? 8 + Math.sin(t * 4) * 2 : 0) + Math.sin(t * 3 + i) * 3;
       drawBottle(ctx, x, BOTTLE_BOTTOM - lift, polish, t, i * 31 + 7, chosen ? 0.9 : 0.75);
     });
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#7a4a8a';
-    ctx.font = `700 14px ${FONT}`;
-    ctx.fillText(POLISHES[this.selected].name, BOTTLE_X[this.selected], BOTTLE_BOTTOM + 24);
+    // Pictures instead of words: an arrow over the next bare hoof, a play button when all are done.
+    const next = nextBare(this.nails);
+    if (next >= 0 && this.progress.every((p) => p >= 1)) {
+      const h = hoofOnScreen(pose, next);
+      drawDownArrow(ctx, h.x, h.y - h.r - 14, 34, t);
+    }
 
     this.sparkles.draw(ctx);
 
     for (const f of this.floaters) {
       ctx.globalAlpha = Math.min(1, f.life * 1.5);
       ctx.fillStyle = C.heart;
-      ctx.fill(heart(f.x - 26, f.y - 7, 9));
-      ctx.font = `800 24px ${FONT}`;
-      ctx.fillText(f.text, f.x + 8, f.y);
+      ctx.fill(heart(f.x, f.y, 14));
     }
     ctx.globalAlpha = 1;
-    ctx.textAlign = 'start';
   }
 }

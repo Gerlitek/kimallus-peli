@@ -15,6 +15,8 @@ export interface UnicornPose {
   t: number;
   /** Cat offset and tilt when it falls off. */
   cat: { dx: number; dy: number; rot: number };
+  /** The cat's face: happy by default, sad in a feelings moment. */
+  catMood?: 'happy' | 'sad';
   /** Overall size; 1 in the game. */
   scale?: number;
   /** Fixed leg angles instead of the running cycle, in leg order (see LEGS). */
@@ -133,7 +135,7 @@ function horn(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean): void {
+function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean, mood: 'happy' | 'sad'): void {
   // Tail curls up and ends in a heart: that is where the hearts will fly from.
   ctx.strokeStyle = C.catShade;
   ctx.lineWidth = 8;
@@ -163,13 +165,30 @@ function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean): void 
   // Head
   ctx.fillStyle = C.cat;
   ctx.fill(blob(hx, hy, 17, 14, { seed: 4, wobble: 0.03 }));
-  // Happy closed eyes
   ctx.strokeStyle = C.eye;
   ctx.lineWidth = 2.2;
-  for (const ex of [hx - 6, hx + 6]) {
+  if (mood === 'sad') {
+    // Droopy eyes, a small frown and a tear: readable without words
+    for (const ex of [hx - 6, hx + 6]) {
+      ctx.beginPath();
+      ctx.arc(ex, hy - 4, 3.5, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
     ctx.beginPath();
-    ctx.arc(ex, hy - 1, 3.5, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.arc(hx, hy + 9, 3.5, Math.PI * 1.2, Math.PI * 1.8);
     ctx.stroke();
+    ctx.fillStyle = '#8fc4ff';
+    const drop = (t * 0.8) % 1;
+    ctx.globalAlpha = 1 - drop * 0.6;
+    ctx.fill(blob(hx - 8, hy + 2 + drop * 8, 1.8, 2.6));
+    ctx.globalAlpha = 1;
+  } else {
+    // Happy closed eyes
+    for (const ex of [hx - 6, hx + 6]) {
+      ctx.beginPath();
+      ctx.arc(ex, hy - 1, 3.5, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+    }
   }
   ctx.fillStyle = C.catNose;
   ctx.fill(heart(hx, hy + 4, 2.6));
@@ -247,7 +266,7 @@ export function drawUnicorn(ctx: CanvasRenderingContext2D, pose: UnicornPose): v
   ctx.save();
   ctx.translate(pose.cat.dx - 20, pose.cat.dy + 4);
   ctx.rotate(pose.cat.rot);
-  cat(ctx, t, grounded);
+  cat(ctx, t, grounded, pose.catMood ?? 'happy');
   ctx.restore();
 
   ctx.restore();

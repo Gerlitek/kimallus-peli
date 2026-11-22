@@ -30,7 +30,7 @@ export const PHYSICS: PhysicsConfig = {
   gravity: 2600,
   jumpVelocity: 820,
   holdGravityScale: 0.45,
-  maxHold: 0.22,
+  maxHold: 0.32,
 };
 
 export interface StepResult {

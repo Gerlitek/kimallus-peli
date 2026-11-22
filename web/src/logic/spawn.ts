@@ -15,6 +15,6 @@ export function pickObstacle(defs: readonly ObstacleDef[], distance: number, rng
 }
 
 /** Empty space after an obstacle, as time at the current speed so it stays fair when the game speeds up. */
-export function gapAfter(speed: number, rng: Rng, minTime = 1.1, maxTime = 2.1): number {
+export function gapAfter(speed: number, rng: Rng, minTime = 1.6, maxTime = 2.6): number {
   return speed * (minTime + rng() * (maxTime - minTime));
 }

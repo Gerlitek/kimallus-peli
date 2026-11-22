@@ -17,10 +17,10 @@ export interface CloudTarget {
 }
 
 export const HEART = {
-  /** Horizontal speed, pixels per second. */
-  speed: 720,
-  /** Upward speed: hearts fly gently up toward the clouds. */
-  rise: 150,
+  /** Horizontal speed, pixels per second. Slow enough to see each heart as a heart. */
+  speed: 360,
+  /** Upward speed: hearts fly gently up toward the clouds (same angle as before). */
+  rise: 75,
   /** Shortest time between two hearts. */
   cooldown: 0.28,
   radius: 11,
@@ -52,7 +52,7 @@ export function hitsCloud(h: Heart, c: CloudTarget): boolean {
 
 /** Seconds until the next sad cloud drifts in. */
 export function nextCloudIn(rng: Rng): number {
-  return 2 + rng() * 2.5;
+  return 5 + rng() * 3;
 }
 
 /** Height of a new cloud on screen: from just above the unicorn's head up to high in the sky. */

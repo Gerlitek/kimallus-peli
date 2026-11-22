@@ -14,7 +14,7 @@ describe('pickObstacle', () => {
   it('offers every obstacle later on', () => {
     const rng = seeded(3);
     const kinds = new Set(Array.from({ length: 200 }, () => pickObstacle(OBSTACLES, 1e6, rng).kind));
-    expect(kinds).toEqual(new Set(['diamond', 'rainbow']));
+    expect(kinds).toEqual(new Set(OBSTACLES.map((o) => o.kind)));
   });
 });
 
@@ -23,8 +23,8 @@ describe('gapAfter', () => {
     const rng = seeded(5);
     for (let i = 0; i < 100; i++) {
       const g = gapAfter(500, rng);
-      expect(g).toBeGreaterThanOrEqual(500 * 1.1);
-      expect(g).toBeLessThanOrEqual(500 * 2.1);
+      expect(g).toBeGreaterThanOrEqual(500 * 1.6);
+      expect(g).toBeLessThanOrEqual(500 * 2.6);
     }
   });
 });
