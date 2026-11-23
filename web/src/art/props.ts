@@ -117,8 +117,8 @@ export function drawCloud(ctx: CanvasRenderingContext2D, cx: number, cy: number,
   }
 }
 
-/** A round arch on short straight legs, as tall as before so the jump height is unchanged. */
-const RAINBOW = { r: 72, legs: 28 } as const;
+/** A small round arch on straight legs: low and narrow enough for the slow, high jump of the first level to clear it easily. */
+const RAINBOW = { r: 54, legs: 34 } as const;
 
 /** A rainbow arch resting on two clouds, like a hurdle. (x, groundY) is the bottom-left corner. */
 export function drawRainbowHurdle(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
@@ -144,8 +144,8 @@ export function drawRainbowHurdle(ctx: CanvasRenderingContext2D, x: number, grou
     drawTwinkle(ctx, cx + Math.cos(a) * (RAINBOW.r - inset), top + Math.sin(a) * (RAINBOW.r - inset), 7, 0.3 + flash(t, 4, i * 1.3) * 0.7, '#ffffff', t + i);
   }
   // Clouds sit on the rainbow's feet and hide its ends.
-  drawCloud(ctx, cx - 50, groundY - 20, 32, 1);
-  drawCloud(ctx, cx + 50, groundY - 20, 32, 2);
+  drawCloud(ctx, cx - 38, groundY - 22, 32, 1);
+  drawCloud(ctx, cx + 38, groundY - 22, 32, 2);
 }
 
 /** A bowl of hot porridge left on the ground to cool, steaming. (x, groundY) is the bottom-left corner. */

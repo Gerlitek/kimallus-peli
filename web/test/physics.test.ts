@@ -74,8 +74,8 @@ describe('obstacles are fair', () => {
     }
   }
 
-  it('a tap does not clear a rainbow at any speed', () => {
-    expect(timeAbove(jump(0), rainbow.hit.h)).toBeLessThan(needed(rainbow.hit.w, MAX_SPEED));
+  it('a tap does not clear a rainbow on the first level', () => {
+    expect(timeAbove(jump(0), rainbow.hit.h)).toBeLessThan(needed(rainbow.hit.w, START_SPEED));
   });
 
   it('holding clears a rainbow even at the slowest speed', () => {

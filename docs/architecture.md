@@ -88,7 +88,7 @@ Tasot ovat dataa (`data/levels.ts`): nopeus, esteiden väli ja se, onko taso lem
 | 2 | 290 px/s | 2,4–3,6 s | kierros päättyy |
 | 3 | 370 px/s | 1,9–2,9 s | kierros päättyy |
 
-- Tason 1 portti tulee aikaisintaan 14000 px:n kohdalla (reilu minuutti juoksua) ja vasta, kun kierroksella on käyty kahdessa rauhoittumispisteessä ja äiti on nähty. Jos puuro ei ole arvonnassa tullut 8000 px:iin mennessä, se tulee seuraavaksi. Tasoilla 2 ja 3 portti tai koti tulee 8000 px:n jälkeen.
+- Tason 1 portti tulee aikaisintaan 14000 px:n kohdalla (reilu minuutti juoksua) ja vasta, kun kierroksella on tullut vastaan kaksi rauhoittumispistettä (käyty tai ohitettu) ja äiti on nähty. Kynnet ja harja vuorottelevat aina, kun piste tarjotaan, joten ohitetun pisteen jälkeen tulee toinen. Jos puuro ei ole arvonnassa tullut 8000 px:iin mennessä, se tulee seuraavaksi. Tasoilla 2 ja 3 portti tai koti tulee 8000 px:n jälkeen.
 - Nopeus on tasolla tasainen. Tasolla 1 saa viipyä niin kauan kuin haluaa.
 - Seuraavalle tasolle pääsee tähtiportista, joka toimii kuten muut poimittavat: juokse läpi tai hyppää yli. Portissa on yhtä monta tähteä kuin tasolla, jolle se vie. Yli hypätty portti palaa 4000 px:n päästä.
 - Viimeisen tason portin tilalla on koti, maali. Siellä äiti odottaa puuron kanssa (`scenes/home-moment.ts`, +50 kimallusta), ja kierros päättyy iloisesti.

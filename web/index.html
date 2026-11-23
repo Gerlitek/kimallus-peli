@@ -37,9 +37,9 @@
     h1 { margin: 0 0 2px; font-size: 1.8rem; color: var(--brand); }
     .title p { margin: 0; color: var(--text-dim); font-size: 0.95rem; }
     /* Compact on purpose: the instructions must not draw attention away from the game. */
-    .howto { margin: 0 0 12px; padding-left: 18px; color: var(--text-dim); font-size: 0.8rem; line-height: 1.5; columns: 2; column-gap: 28px; }
+    .howto { margin: 0 0 12px; padding: 0; list-style: none; color: var(--text); font-size: 0.85rem; line-height: 1.55; columns: 2; column-gap: 28px; }
     .howto li { break-inside: avoid; }
-    .howto b { color: var(--text); }
+    .howto b { color: #ff9fcd; font-weight: 600; }
     @media (max-width: 560px) { .howto { columns: 1; } }
     kbd { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 0.75rem; }
 
@@ -102,7 +102,9 @@
     .score-big .lumen { width: 0.8em; height: 0.8em; }
     .record { color: #ffc94a; text-shadow: 0 0 12px rgba(255, 220, 120, 0.9); }
 
-    .dedication { margin: 18px 0 0; font-size: 0.95rem; color: var(--text-dim); }
+    /* A dedication on the left under the game, where the sister game has its credit line. No name, on purpose. */
+    .credit { margin: 14px 0 0; font-size: 0.8rem; color: var(--text-dim); }
+    .credit b { color: #d9c4a3; font-weight: 400; }
 
     /* The publisher line is small and faint on purpose, far below the game. */
     footer {
@@ -128,16 +130,16 @@
       <canvas id="logo" aria-hidden="true"></canvas>
       <div>
         <h1>Kimallus</h1>
-        <p>Hypi yksisarvisella pinkissä tähtimaailmassa.</p>
+        <p>Kissa ja yksisarvinen lähtevät retkelle pinkkiin tähtimaailmaan. Alussa ei ole kiire minnekään.</p>
       </div>
     </div>
     <ol class="howto">
       <li><b>Hyppää</b>: <kbd>välilyönti</kbd>, nuoli ylös, hiiren klikkaus tai napautus.</li>
-      <li><b>Korkea hyppy</b>: pidä pohjassa.</li>
-      <li><b>Jalokivet</b> ylittää lyhyellä hypyllä.</li>
-      <li><b>Sateenkaaret ja timanttijoki</b> vaativat pitkän hypyn.</li>
-      <li><b>Syömään!</b> Äiti on tehnyt kuumaa puuroa: hyppää kulhon yli.</li>
-      <li><b>Sydän</b>: <kbd>X</kbd> tai hiiren oikea. Osu surulliseen pilveen, niin se ilahtuu.</li>
+      <li><b>Iso loikka</b>: pidä painettuna, niin yksisarvinen leijuu korkealle.</li>
+      <li><b>Jalokivet</b>: pieni hyppy riittää.</li>
+      <li><b>Sateenkaaret ja timanttijoki</b>: iso loikka vie yli.</li>
+      <li><b>Syömään!</b> Äidin puuro jäähtyy kulhossa: hypätään sen yli.</li>
+      <li><b>Sydän</b>: <kbd>X</kbd> tai hiiren oikea. Lähetä sydän surulliselle pilvelle, niin se ilahtuu.</li>
     </ol>
     <div id="game">
       <div class="frame">
@@ -147,7 +149,7 @@
         <div id="message"></div>
       </div>
     </div>
-    <p class="dedication">Kaikille valon lapsille.</p>
+    <p class="credit"><b>Kaikille valon lapsille.</b></p>
     <footer>
       <a class="stats" href="tilastot/">Tilastot</a>
       <span>Toteutus ja julkaisu</span>

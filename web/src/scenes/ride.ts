@@ -144,8 +144,8 @@ export class RideScene implements Scene {
   private nextStationAt = FIRST_STATION_AT;
   /** A calm moment over the paused ride: a station or the sharing moment. */
   private pause: NailStation | ManeStation | ShareMoment | HomeMoment | null = null;
-  /** Stations visited during this visit: nails and mane take turns. */
-  private stationsVisited = 0;
+  /** Stations offered on the track during this visit: nails and mane take turns. */
+  private stationsOffered = 0;
   private starsCollected = 0;
   private shared = false;
   /** Painted hooves stay for the rest of the visit, also in later runs. */
@@ -345,7 +345,12 @@ export class RideScene implements Scene {
     const gate = explored && this.distance >= this.nextGateAt;
     const gap = LEVELS[this.level].gap;
     if (!this.pickup && (share || station || gate)) {
-      const calm = this.stationsVisited % 2 === 0 ? 'polish' : 'clip';
+      // Nails and mane take turns each time one is offered, so jumping over one brings the other next.
+      const calm = this.stationsOffered % 2 === 0 ? 'polish' : 'clip';
+      if (!share && station) {
+        this.stationsOffered += 1;
+        this.stationsThisRun += 1;
+      }
       // After the last level the gate is home, the goal.
       const onward = this.level < LEVELS.length - 1 ? 'gate' : 'home';
       this.pickup = { x: WIDTH + 40, kind: share ? 'share' : station ? calm : onward };
@@ -426,8 +431,6 @@ export class RideScene implements Scene {
 
   private enterStation(kind: 'polish' | 'clip'): void {
     this.pickup = null;
-    this.stationsVisited += 1;
-    this.stationsThisRun += 1;
     this.nextStationAt = this.distance + STATION_EVERY;
     this.rider = restingRider();
     this.glitter.clear();

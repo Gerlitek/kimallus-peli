@@ -22,7 +22,7 @@ export const LEVELS: readonly Level[] = [
 export const SLOWEST = LEVELS[0].speed;
 export const FASTEST = LEVELS[LEVELS.length - 1].speed;
 
-/** On the first level the gate also waits until this many calm stations have been visited and mum has been seen. */
+/** On the first level the gate also waits until this many calm stations have come up (visited or jumped over) and mum has been seen. */
 export const STATIONS_BEFORE_GATE = 2;
 /** If mum's porridge has not come up by this distance, it comes next: she is part of the first level. */
 export const MOM_BY = 8000;
