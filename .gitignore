@@ -18,3 +18,6 @@ skills-lock.json
 # AWS CDK: local context holds account details; build output is generated.
 cdk.context.json
 cdk.out/
+
+# SSH deploy key for the web host. Lives in GitHub secrets, never in the repo.
+kimallus_deploy*

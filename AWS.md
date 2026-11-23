@@ -67,3 +67,4 @@ Rastita kohdat työn edetessä. Kustannukset: `kustannukset.md`.
 |---|---|---|
 | | CDK TypeScriptillä, Lambda TS | Yksi kieli, nopea käynnistys, tunnetuin CDK-kieli |
 | | Vektorigrafiikka, omat hahmot | Ei sekoitu zombipelin pikselityyliin |
+| 2026-11-23 | Front ensin gerlitekin webhotelliin (rsync), AWS myöhemmin | Peli verkkoon heti ilman kuluja, sama malli kuin zombipelissä |

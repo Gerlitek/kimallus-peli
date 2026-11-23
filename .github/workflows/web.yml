@@ -1,7 +1,8 @@
-# Front: type check, unit tests and production build.
-# Pushes and pull requests only build and test. The AWS deploy (S3 + CloudFront) is added
-# with the CDK stacks: it will run only when the owner starts the workflow by hand on main
-# and approves it in the environment "production".
+# Front: type check, unit tests, production build and deploy to the web host.
+# Pushes and pull requests only build and test. The deploy runs only when the owner
+# starts the workflow by hand on main (Actions > web > Run workflow, or `gh workflow run web`).
+# The deploy uses the environment "production": the owner approves the run before it starts.
+# Interim host: gerlitek shared hosting over SSH + rsync. S3 + CloudFront replaces it in stage 2.
 name: web
 
 on:
@@ -17,6 +18,7 @@ permissions:
 
 concurrency:
   group: web-${{ github.ref }}
+  # Never cancel a running deploy halfway. Only superseded pull request builds are cancelled.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -36,4 +38,38 @@ jobs:
         with:
           name: web-dist
           path: web/dist
+          include-hidden-files: true # without this .htaccess is left out of the artifact
           retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-dist
+          path: dist
+      - name: Install the deploy key and the pinned host key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          # Pinned fingerprint SHA256:iO596IX5WjAaAsu9r19P8b4KFznagt4G425dg4gC4rc.
+          # If the host key changes, the deploy fails instead of trusting a stranger.
+          echo 'gerlitek.fi ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBikwALrcmKz8x5xbtpWY/UxZ8/XPem34cluLcb0eBGe' > ~/.ssh/known_hosts
+      - name: Check the build before it replaces the live site
+        run: test -f dist/index.html && test -f dist/.htaccess && test -f dist/tilastot/index.html
+      - name: Sync to the web host
+        env:
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        # The key is restricted on the server (rrsync), so "./" is the game's public folder.
+        # --delete removes files from older builds, such as old hashed JS files.
+        run: |
+          rsync -av --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            dist/ "$DEPLOY_USER@gerlitek.fi:./"

@@ -29,6 +29,8 @@ Kaikki kulkee yhden CloudFront-jakelun kautta. Silloin front ja API ovat samassa
 
 Versio 1 on pelkkä staattinen front (S3 + CloudFront). API ja yöajo tulevat myöhemmin.
 
+**Väliratkaisu ennen AWS:ää:** front julkaistaan ensin gerlitekin webhotelliin (Apache) samalla tavalla kuin zombipeli: GitHub Actions, rsync SSH:n yli, hyväksyntä ympäristössä `production`. Peli on silloin verkossa ilman AWS-kuluja. Kun web-pino (S3 + CloudFront) on valmis, CNAME käännetään CloudFrontiin ja rsync-vaihe poistetaan. Ks. luku 6.
+
 ## 2. Front
 
 ### Valinnat
@@ -207,7 +209,7 @@ infra/
 
 | Työnkulku | Vaiheet |
 |---|---|
-| `web.yml` | lint, test, build |
+| `web.yml` | tyyppitarkistus, Vitest, build; käsin käynnistettynä hyväksyntä ja rsync gerlitekiin (väliratkaisu) |
 | `api.yml` | lint, test |
 | `infra.yml` | `cdk synth`, testit, PR:ssä `cdk diff`, mainissa deploy hyväksynnän takana (GitHub Environment) |
 
@@ -218,6 +220,14 @@ Käytännöt zombipelin mallin mukaan:
 - Actionit lukitaan commit-SHA:han, ei tagiin.
 - Käynnissä olevaa deployta ei peruta (`concurrency`).
 - Tilitason asiat (bootstrap, budjetti, OIDC-rooli) omistaja deployaa käsin.
+
+### Väliratkaisu: julkaisu gerlitekiin
+- Front kopioidaan jaetulle webhotellille (Apache) rsyncillä SSH:n yli. `--delete` poistaa vanhojen buildien tiedostot.
+- SSH-avain on ympäristön `production` salaisuus `DEPLOY_SSH_KEY`, joten sen saa vain hyväksytty ajo. Palvelimen käyttäjätunnus on muuttuja `DEPLOY_USER`. Avain on tehty vain tähän peliin, ja palvelimella se on rajattu pelin kansioon (`command=`-rajoitus ja `rrsync` `authorized_keys`issa).
+- Palvelimen host key on kiinnitetty työnkulkuun. Jos se vaihtuu, julkaisu kaatuu eikä luota vieraaseen.
+- Ennen synkronointia tarkistetaan, että buildissa on `index.html`, `tilastot/index.html` ja `.htaccess`, ettei vajaa build tyhjennä sivustoa.
+- `web/public/.htaccess`: HTTPS-uudelleenohjaus, ei hakemistolistausta, tiukka CSP (vain oma alkuperä, ei ulkoisia skriptejä tai fontteja), välimuisti: hashatut tiedostot vuosi, sivut ja JSON aina tuoreena. HSTS lisätään, kun varmenne on uusiutunut kerran ongelmitta.
+- Kun API tulee, CSP:n `connect-src`iin lisätään API:n osoite.
 
 ## 7. Repo
 
@@ -235,7 +245,7 @@ npm workspaces, yksi `package.json` juuressa.
 ## 8. Vaiheet
 
 1. **Paikallinen peli:** Ride-kohtaus, yksisarvinen, kissa, kaksi estettä. Ei AWS:ää.
-2. **Verkkoon:** bootstrap-pino, web-pino, CI. Peli julkisesti CloudFrontissa.
+2. **Verkkoon:** ensin gerlitekin webhotelliin rsyncillä (väliratkaisu), sitten bootstrap-pino, web-pino ja CI. Peli julkisesti CloudFrontissa.
 3. **Sisältö:** loput esteet, kuppikakut, sydänpilvet, yksi Station, tarinalauseet.
 4. **API:** pisteet ja pistetaulukko, kulusuojat.
 5. **Data:** tapahtumat, yöajo, tilastosivu.
@@ -262,6 +272,7 @@ Jokaisen vaiheen jälkeen tarkistetaan `AWS.md`:n kohdat ja Cost Explorer.
 | Sydämet osuvat harmaisiin pilviin | ampumiselle tavoite, tunnetaito: suru → ilo |
 | Canvas 2D ilman pelimoottoria | pieni peli, kevyt ja selitettävä |
 | CDK TypeScript, Lambda Node.js | yksi kieli, tunnetuin CDK-kieli |
+| Front ensin gerlitekiin rsyncillä, sitten S3 + CloudFront | peli verkkoon heti ilman kuluja, sama todettu malli kuin zombipelissä; AWS-työ ei viivästytä julkaisua |
 
 ## 10. Avoimet kysymykset
 
