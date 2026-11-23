@@ -134,6 +134,8 @@ export class RideScene implements Scene {
   private fallTime = 0;
   private readyTime = 0;
   private best = loadBest();
+  /** The best score already written to the browser's storage; `best` follows it when a run ends. */
+  private saved = this.best;
   private readonly glitter = new Particles();
   private readonly orbs: LumenOrbs;
   /** Lumens collected in this run (stars, clouds, stations). */
@@ -210,6 +212,16 @@ export class RideScene implements Scene {
     },
   });
 
+  /**
+   * Saves a new best score the moment it is reached, not only when a run ends:
+   * a child may stop with Esc or simply close the window, and the first level never ends by itself.
+   */
+  private keepBest(): void {
+    if (this.score <= this.saved) return;
+    this.saved = this.score;
+    saveBest(this.saved);
+  }
+
   private get score(): number {
     return scoreFor(this.distance, this.bonus);
   }
@@ -219,12 +231,14 @@ export class RideScene implements Scene {
     this.bonus += lumens;
     this.orbs.burst(x, y, Math.min(lumens, 3), this.rng);
     this.hud.score(this.score);
+    this.keepBest();
   }
 
   update(dt: number, input: Input): void {
     this.time += dt;
     // Esc leaves the game and returns to the start screen.
     if (input.takeQuit() && this.phase !== 'ready') {
+      this.best = this.saved;
       this.hud.ended();
       this.enter();
       return;
@@ -334,6 +348,7 @@ export class RideScene implements Scene {
     }
 
     this.hud.score(this.score);
+    this.keepBest();
   }
 
   private spawn(): void {
@@ -496,7 +511,6 @@ export class RideScene implements Scene {
     const record = score > this.best;
     if (record) {
       this.best = score;
-      saveBest(score);
       this.hud.best(score);
     }
     this.hud.message(endCard(score, record, this.level + 1, home));

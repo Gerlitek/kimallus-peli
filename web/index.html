@@ -41,6 +41,14 @@
     .howto li { break-inside: avoid; }
     .howto b { color: #ff9fcd; font-weight: 600; }
     @media (max-width: 560px) { .howto { columns: 1; } }
+    /* The drawn player name and the button for a new one, just above the game. */
+    .player { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 10px; font-size: 0.85rem; color: var(--text-dim); }
+    .player b { color: var(--stats); font-weight: 600; }
+    .player button {
+      font: inherit; font-size: 0.75rem; color: var(--text-dim); cursor: pointer;
+      background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px;
+    }
+    .player button:hover { color: var(--text); border-color: var(--brand); }
     kbd { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 0.75rem; }
 
     #game {
@@ -141,6 +149,11 @@
       <li><b>Syömään!</b> Äidin puuro jäähtyy kulhossa: hypätään sen yli.</li>
       <li><b>Sydän</b>: <kbd>X</kbd> tai hiiren oikea. Lähetä sydän surulliselle pilvelle, niin se ilahtuu.</li>
     </ol>
+    <p class="player">
+      <span>Pelinimesi:</span>
+      <b id="player-name"></b>
+      <button id="reroll" type="button">Arvo uusi <kbd>N</kbd></button>
+    </p>
     <div id="game">
       <div class="frame">
         <canvas id="play" aria-label="Kimallus-peli"></canvas>
@@ -160,7 +173,7 @@
     <details class="privacy">
       <summary>Tietosuoja</summary>
       <ul>
-        <li>Selaimeesi tallentuu oma paras tuloksesi. Se pysyy laitteellasi.</li>
+        <li>Selaimeesi tallentuvat arvottu pelinimi ja oma paras tuloksesi. Ne pysyvät laitteellasi.</li>
         <li>Peliin ei kirjoiteta omaa nimeä eikä muuta vapaata tekstiä.</li>
         <li>Peli ei käytä evästeitä, kolmannen osapuolen analytiikkaa eikä mainoksia.</li>
         <li>Selaimen tiedot saat pois tyhjentämällä sivuston tiedot selaimen asetuksista.</li>

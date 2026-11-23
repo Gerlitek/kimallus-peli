@@ -92,6 +92,7 @@ Tasot ovat dataa (`data/levels.ts`): nopeus, esteiden väli ja se, onko taso lem
 - Nopeus on tasolla tasainen. Tasolla 1 saa viipyä niin kauan kuin haluaa.
 - Seuraavalle tasolle pääsee tähtiportista, joka toimii kuten muut poimittavat: juokse läpi tai hyppää yli. Portissa on yhtä monta tähteä kuin tasolla, jolle se vie. Yli hypätty portti palaa 4000 px:n päästä.
 - Viimeisen tason portin tilalla on koti, maali. Siellä äiti odottaa puuron kanssa (`scenes/home-moment.ts`, +50 kimallusta), ja kierros päättyy iloisesti.
+- Oma paras tulos tallentuu selaimeen heti, kun se ylittyy, ei vasta kierroksen lopussa. Näin se säilyy, vaikka peli lopetetaan Esc:llä tai ikkuna suljetaan.
 - Jokainen kierros alkaa tasolta 1, joten vahingossa valittu nopea taso ei jää päälle.
 - Taso näkyy pelissä tähtinä yläreunassa ja lopputuloskortissa; kotiin päässeellä on kortissa talo.
 - Pistetaulukkoon (vaihe 4) tallennetaan pisteiden lisäksi saavutettu taso ja maaliin pääsy.
@@ -131,6 +132,8 @@ Miljöö: pinkki, kimalteleva tähtimaailma ja asteroidit. Termi *stellar* (lois
 
 ### Nimimerkit
 Pitkät söpöt nimet yhdistellään sanalistoista (sydän, tähti, yksisarvinen, sateenkaari …). Nimi tallennetaan **sanalistojen indekseinä**, ei vapaana tekstinä. Palvelin hyväksyy vain kelvolliset indeksit, joten julkiseen tauluun ei voi kirjoittaa mitä tahansa. Sanalistat ovat jaetussa `shared/`-paketissa.
+
+Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (kuvaileva sana, kahden teemasanan yhdyssana, hahmo). Nimessä on aina kolme sanaa, jotta sen voi lukea lapselle ja muistaa; ei numeroita. Yhdistelmiä on 228 000 (30 × 20 × 19 × 20), joten sama nimi osuu kahdelle harvoin, ja rivit erotetaan joka tapauksessa istuntotunnisteella. Uudet sanat lisätään listan loppuun, koska tallennetut nimet ovat indeksejä. Se arvotaan ensimmäisellä käynnillä, tallentuu selaimeen indekseinä ja näkyy pelin yläpuolella; "Arvo uusi" arpoo toisen. Listat ovat toistaiseksi tiedostossa `web/src/data/names.ts` ja säännöt tiedostossa `web/src/logic/names.ts`; ne siirtyvät `shared/`-pakettiin, kun API tulee.
 
 ### Tila selaimessa
 - `localStorage`: nimimerkki (indekseinä), omat parhaat, ääniasetus. Luku ja kirjoitus `try/catch`issa.

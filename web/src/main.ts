@@ -2,7 +2,9 @@ import './fonts';
 import { drawUnicorn } from './art/unicorn';
 import { RideScene } from './scenes/ride';
 import { HEIGHT, WIDTH, type Scene } from './scenes/scene';
+import { formatName, rollName } from './logic/names';
 import { Input } from './systems/input';
+import { loadName, saveName } from './systems/storage';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#play')!;
 const ctx = canvas.getContext('2d')!;
@@ -37,6 +39,26 @@ function drawLogo(): void {
 }
 drawLogo();
 
+// The player's name: drawn from word lists on the first visit and kept in this browser.
+// The button draws a new one. Only the word indexes are stored, never free text.
+const nameEl = document.querySelector<HTMLElement>('#player-name')!;
+const rerollEl = document.querySelector<HTMLButtonElement>('#reroll')!;
+function showName(name = rollName(Math.random)): void {
+  saveName(name);
+  nameEl.textContent = formatName(name);
+}
+showName(loadName() ?? undefined);
+rerollEl.addEventListener('click', () => {
+  showName();
+  // Give the keyboard back to the game: the next space starts the ride, not this button.
+  rerollEl.blur();
+});
+// N draws a new name too, but only on the start screen: never by accident in the middle of a ride.
+let playing = false;
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyN' && !e.repeat && !playing) showName();
+});
+
 // The canvas follows its container's size; the game always draws in WIDTH x HEIGHT logical pixels.
 function resize(): void {
   const rect = canvas.getBoundingClientRect();
@@ -63,8 +85,14 @@ const scene: Scene = new RideScene({
     messageEl.hidden = html === null;
     messageEl.innerHTML = html ?? '';
   },
-  started: enterFullscreen,
-  ended: exitFullscreen,
+  started: () => {
+    playing = true;
+    enterFullscreen();
+  },
+  ended: () => {
+    playing = false;
+    exitFullscreen();
+  },
 });
 scene.enter();
 
