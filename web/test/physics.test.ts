@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OBSTACLES } from '../src/data/obstacles';
-import { MAX_SPEED, START_SPEED } from '../src/logic/score';
+import { FASTEST as MAX_SPEED, LEVELS, SLOWEST as START_SPEED } from '../src/data/levels';
 import { restingRider, stepRider, type Rider } from '../src/logic/physics';
 
 const DT = 1 / 120;
@@ -61,7 +61,7 @@ describe('obstacles are fair', () => {
   // with room to spare: a child's timing is not perfect.
   const SLACK = 1.25;
   for (const o of OBSTACLES) {
-    for (const speed of [START_SPEED, MAX_SPEED]) {
+    for (const { speed } of LEVELS) {
       it(`${o.kind} is cleared with a ${o.jump} at ${speed} px/s, with slack for timing`, () => {
         const jumpTime = o.jump === 'tap' ? 0 : 1;
         expect(timeAbove(jump(jumpTime), o.hit.h)).toBeGreaterThan(needed(o.hit.w, speed) * SLACK);

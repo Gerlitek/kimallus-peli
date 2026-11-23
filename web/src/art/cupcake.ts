@@ -2,7 +2,7 @@ import { PALETTE as C } from './palette';
 import { blob, heart, softStar } from './shapes';
 import { drawTwinkle, flash } from './sparkle';
 
-const FROSTING = ['#ffb3d9', '#ffd1ea', '#e7c9ff', '#ffe0b8'] as const;
+const FROSTING = ['#ff6fb0', '#ffd1ea', '#e7c9ff', '#ffe0b8'] as const;
 
 /** A cupcake with swirly frosting and sprinkles; the topping is a heart or a star. (x, bottom) is the base centre. */
 export function drawCupcake(ctx: CanvasRenderingContext2D, x: number, bottom: number, t: number, seed: number): void {
@@ -13,15 +13,27 @@ export function drawCupcake(ctx: CanvasRenderingContext2D, x: number, bottom: nu
   ctx.fillStyle = glow;
   ctx.fillRect(x - 34, bottom - 56, 68, 68);
 
+  const wrapper = new Path2D();
+  wrapper.moveTo(x - 13, bottom);
+  wrapper.lineTo(x + 13, bottom);
+  wrapper.lineTo(x + 17, bottom - 18);
+  wrapper.lineTo(x - 17, bottom - 18);
+  wrapper.closePath();
+  const swirl = [
+    blob(x, bottom - 22, 20, 9, { seed }),
+    blob(x - 1, bottom - 30, 15, 8, { seed: seed + 1 }),
+    blob(x + 1, bottom - 37, 9, 6, { seed: seed + 2 }),
+  ];
+
+  // A white edge all around, like a sticker: the cupcake stands out from the pink sky.
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  for (const part of [wrapper, ...swirl]) ctx.stroke(part);
+
   // Pleated wrapper
-  ctx.fillStyle = '#c9a7ff';
-  ctx.beginPath();
-  ctx.moveTo(x - 13, bottom);
-  ctx.lineTo(x + 13, bottom);
-  ctx.lineTo(x + 17, bottom - 18);
-  ctx.lineTo(x - 17, bottom - 18);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillStyle = '#8f63e8';
+  ctx.fill(wrapper);
   ctx.strokeStyle = 'rgba(255,255,255,0.6)';
   ctx.lineWidth = 1.5;
   for (const k of [-0.6, -0.2, 0.2, 0.6]) {
@@ -34,9 +46,7 @@ export function drawCupcake(ctx: CanvasRenderingContext2D, x: number, bottom: nu
   // Frosting swirl
   const frosting = FROSTING[seed % FROSTING.length];
   ctx.fillStyle = frosting;
-  ctx.fill(blob(x, bottom - 22, 20, 9, { seed }));
-  ctx.fill(blob(x - 1, bottom - 30, 15, 8, { seed: seed + 1 }));
-  ctx.fill(blob(x + 1, bottom - 37, 9, 6, { seed: seed + 2 }));
+  for (const part of swirl) ctx.fill(part);
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fill(blob(x - 7, bottom - 33, 4, 2.5, { seed }));
 
@@ -55,7 +65,7 @@ export function drawCupcake(ctx: CanvasRenderingContext2D, x: number, bottom: nu
 
   // Topping: hearts and stars take turns
   if (seed % 2 === 0) {
-    ctx.fillStyle = C.heart;
+    ctx.fillStyle = '#e8304a';
     ctx.fill(heart(x + 1, bottom - 45, 7));
   } else {
     ctx.fillStyle = '#ffd86b';

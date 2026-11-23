@@ -15,8 +15,6 @@ export interface UnicornPose {
   t: number;
   /** Cat offset and tilt when it falls off. */
   cat: { dx: number; dy: number; rot: number };
-  /** The cat's face: happy by default, sad in a feelings moment. */
-  catMood?: 'happy' | 'sad';
   /** Overall size; 1 in the game. */
   scale?: number;
   /** Fixed leg angles instead of the running cycle, in leg order (see LEGS). */
@@ -25,7 +23,12 @@ export interface UnicornPose {
   hoofScale?: number;
   /** Draws over each hoof, e.g. nail polish. Coordinates are the unicorn's own. */
   hoof?: (ctx: CanvasRenderingContext2D, path: Path2D, box: HoofBox, index: number) => void;
+  /** Draws on each mane tuft, e.g. a hair clip. Coordinates are the unicorn's own. */
+  clip?: (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, index: number) => void;
 }
+
+/** What the unicorn wears: painted hooves and clips in the mane. Takes the time, for glitter. */
+export type Decor = (t: number) => Pick<UnicornPose, 'hoof' | 'clip'>;
 
 export interface HoofBox {
   x: number;
@@ -87,7 +90,7 @@ function leg(ctx: CanvasRenderingContext2D, pose: UnicornPose, i: number): void 
 function tail(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineCap = 'round';
   C.rainbow.forEach((color, i) => {
-    const sway = Math.sin(t * 6 + i * 0.6) * 6;
+    const sway = Math.sin(t * 3 + i * 0.6) * 6;
     ctx.strokeStyle = color;
     ctx.lineWidth = 7;
     ctx.beginPath();
@@ -97,18 +100,30 @@ function tail(ctx: CanvasRenderingContext2D, t: number): void {
   });
 }
 
-function mane(ctx: CanvasRenderingContext2D, t: number): void {
-  const tufts: Array<[number, number, number]> = [
-    [30, -132, 11],
-    [24, -118, 12],
-    [20, -103, 12],
-    [17, -88, 11],
-    [40, -140, 9],
-  ];
-  tufts.forEach(([x, y, r], i) => {
+/** Mane tufts: x, y and radius in the unicorn's own coordinates. */
+const TUFTS = [
+  [30, -132, 11],
+  [24, -118, 12],
+  [20, -103, 12],
+  [17, -88, 11],
+  [40, -140, 9],
+] as const;
+export const TUFT_COUNT = TUFTS.length;
+
+/** A mane tuft's centre on screen, for tapping and for clips flying to it. */
+export function tuftOnScreen(pose: UnicornPose, i: number): { x: number; y: number; r: number } {
+  const [x, y, r] = TUFTS[i];
+  const s = pose.scale ?? 1;
+  return { x: pose.x + x * s * pose.sx, y: pose.y + y * s * pose.sy, r: r * s };
+}
+
+function mane(ctx: CanvasRenderingContext2D, pose: UnicornPose): void {
+  const t = pose.t;
+  TUFTS.forEach(([x, y, r], i) => {
     ctx.fillStyle = C.rainbow[i % C.rainbow.length];
-    ctx.fill(blob(x - Math.sin(t * 7 + i) * 2, y, r, r * 0.85, { seed: i + 3, phase: t * 3, wobble: 0.12 }));
+    ctx.fill(blob(x - Math.sin(t * 3.5 + i) * 2, y, r, r * 0.85, { seed: i + 3, phase: t * 3, wobble: 0.12 }));
   });
+  if (pose.clip) TUFTS.forEach(([x, y, r], i) => pose.clip!(ctx, x, y, r, i));
 }
 
 function horn(ctx: CanvasRenderingContext2D): void {
@@ -135,7 +150,7 @@ function horn(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean, mood: 'happy' | 'sad'): void {
+function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean): void {
   // Tail curls up and ends in a heart: that is where the hearts will fly from.
   ctx.strokeStyle = C.catShade;
   ctx.lineWidth = 8;
@@ -151,7 +166,7 @@ function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean, mood: 
   ctx.fillStyle = C.cat;
   ctx.fill(blob(-6, -102, 22, 17, { seed: 9, phase: t * 2, wobble: 0.04 }));
 
-  const bob = grounded ? Math.sin(t * 14) * 1.5 : -2;
+  const bob = grounded ? Math.sin(t * 6) * 1.5 : -2;
   const hx = 10;
   const hy = -128 + bob;
   // Ears
@@ -167,28 +182,11 @@ function cat(ctx: CanvasRenderingContext2D, t: number, grounded: boolean, mood: 
   ctx.fill(blob(hx, hy, 17, 14, { seed: 4, wobble: 0.03 }));
   ctx.strokeStyle = C.eye;
   ctx.lineWidth = 2.2;
-  if (mood === 'sad') {
-    // Droopy eyes, a small frown and a tear: readable without words
-    for (const ex of [hx - 6, hx + 6]) {
-      ctx.beginPath();
-      ctx.arc(ex, hy - 4, 3.5, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.stroke();
-    }
+  // Happy closed eyes
+  for (const ex of [hx - 6, hx + 6]) {
     ctx.beginPath();
-    ctx.arc(hx, hy + 9, 3.5, Math.PI * 1.2, Math.PI * 1.8);
+    ctx.arc(ex, hy - 1, 3.5, Math.PI * 1.1, Math.PI * 1.9);
     ctx.stroke();
-    ctx.fillStyle = '#8fc4ff';
-    const drop = (t * 0.8) % 1;
-    ctx.globalAlpha = 1 - drop * 0.6;
-    ctx.fill(blob(hx - 8, hy + 2 + drop * 8, 1.8, 2.6));
-    ctx.globalAlpha = 1;
-  } else {
-    // Happy closed eyes
-    for (const ex of [hx - 6, hx + 6]) {
-      ctx.beginPath();
-      ctx.arc(ex, hy - 1, 3.5, Math.PI * 1.1, Math.PI * 1.9);
-      ctx.stroke();
-    }
   }
   ctx.fillStyle = C.catNose;
   ctx.fill(heart(hx, hy + 4, 2.6));
@@ -237,7 +235,7 @@ export function drawUnicorn(ctx: CanvasRenderingContext2D, pose: UnicornPose): v
   ctx.fill(smoothClosed([[40, -130], [44, -152], [52, -134]], 0.5));
 
   horn(ctx);
-  mane(ctx, t);
+  mane(ctx, pose);
 
   // Eye with sparkle and lashes
   ctx.fillStyle = C.eye;
@@ -266,7 +264,7 @@ export function drawUnicorn(ctx: CanvasRenderingContext2D, pose: UnicornPose): v
   ctx.save();
   ctx.translate(pose.cat.dx - 20, pose.cat.dy + 4);
   ctx.rotate(pose.cat.rot);
-  cat(ctx, t, grounded, pose.catMood ?? 'happy');
+  cat(ctx, t, grounded);
   ctx.restore();
 
   ctx.restore();

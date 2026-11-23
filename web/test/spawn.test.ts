@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { OBSTACLES } from '../src/data/obstacles';
 import { overlaps } from '../src/logic/collision';
 import { seeded } from '../src/logic/random';
-import { MAX_SPEED, scoreFor, speedAt, START_SPEED } from '../src/logic/score';
+import { LEVELS } from '../src/data/levels';
+import { scoreFor } from '../src/logic/score';
 import { gapAfter, pickObstacle } from '../src/logic/spawn';
 
 describe('pickObstacle', () => {
@@ -22,17 +23,20 @@ describe('gapAfter', () => {
   it('scales with speed and stays in range', () => {
     const rng = seeded(5);
     for (let i = 0; i < 100; i++) {
-      const g = gapAfter(500, rng);
-      expect(g).toBeGreaterThanOrEqual(500 * 1.6);
-      expect(g).toBeLessThanOrEqual(500 * 2.6);
+      const g = gapAfter(500, rng, { min: 2, max: 3 });
+      expect(g).toBeGreaterThanOrEqual(500 * 2);
+      expect(g).toBeLessThanOrEqual(500 * 3);
     }
   });
 });
 
-describe('score and speed', () => {
-  it('speeds up to a cap', () => {
-    expect(speedAt(0)).toBe(START_SPEED);
-    expect(speedAt(1000)).toBe(MAX_SPEED);
+describe('score and levels', () => {
+  it('levels get faster and tighter, and only the first one is gentle', () => {
+    for (let i = 1; i < LEVELS.length; i++) {
+      expect(LEVELS[i].speed).toBeGreaterThan(LEVELS[i - 1].speed);
+      expect(LEVELS[i].gap.min).toBeLessThan(LEVELS[i - 1].gap.min);
+    }
+    expect(LEVELS.map((l) => l.gentle)).toEqual([true, ...LEVELS.slice(1).map(() => false)]);
   });
 
   it('counts lumens from distance and adds collected ones', () => {

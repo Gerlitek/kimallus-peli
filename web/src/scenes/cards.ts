@@ -9,7 +9,9 @@ export function playCard(): string {
   return ADULT_HINT;
 }
 
-export function fallCard(score: number, record: boolean): string {
+/** The end of a run: the level reached as stars, a house if the ride got all the way home, and the score. */
+export function endCard(score: number, record: boolean, level: number, home: boolean): string {
   const star = record ? '<span class="record" aria-label="Uusi ennätys">★</span>' : '';
-  return `<div class="card icon"><div class="score-big" aria-label="${score} kimallusta"><i class="lumen"></i>${score}${star}</div></div>${ADULT_HINT}`;
+  const reached = `<div class="record" aria-label="Taso ${level}${home ? ', perillä kotona' : ''}">${'★'.repeat(level)}${home ? ' 🏠' : ''}</div>`;
+  return `<div class="card icon">${reached}<div class="score-big" aria-label="${score} kimallusta"><i class="lumen"></i>${score}${star}</div></div>${ADULT_HINT}`;
 }

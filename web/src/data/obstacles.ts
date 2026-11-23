@@ -1,4 +1,4 @@
-export type ObstacleKind = 'diamond' | 'rainbow' | 'mom' | 'river';
+export type ObstacleKind = 'diamond' | 'rainbow' | 'porridge' | 'river';
 
 export interface ObstacleDef {
   kind: ObstacleKind;
@@ -18,9 +18,9 @@ export const OBSTACLES: readonly ObstacleDef[] = [
   // A short tap clears a diamond.
   { kind: 'diamond', width: 56, hit: { dx: 10, w: 36, h: 46 }, jump: 'tap', weight: 3, unlockAt: 0 },
   // A rainbow bar resting on two clouds needs a held, high jump.
-  { kind: 'rainbow', width: 180, hit: { dx: 55, w: 70, h: 112 }, jump: 'hold', weight: 2, unlockAt: 2500 },
-  // "Syömään!": mum waves the player in to eat. A well-timed tap hops past, and the play goes on.
-  { kind: 'mom', width: 80, hit: { dx: 25, w: 30, h: 56 }, jump: 'tap', weight: 2, unlockAt: 3500 },
+  { kind: 'rainbow', width: 180, hit: { dx: 58, w: 64, h: 112 }, jump: 'hold', weight: 2, unlockAt: 2500 },
+  // Mum has left a bowl of hot porridge to cool: a small hop over it, and only now and then.
+  { kind: 'porridge', width: 70, hit: { dx: 16, w: 38, h: 34 }, jump: 'tap', weight: 0.7, unlockAt: 3500 },
   // A river of tumbling diamonds: low but long, a held jump carries over it.
-  { kind: 'river', width: 190, hit: { dx: 35, w: 120, h: 18 }, jump: 'hold', weight: 1.5, unlockAt: 5000 },
+  { kind: 'river', width: 190, hit: { dx: 40, w: 110, h: 18 }, jump: 'hold', weight: 1.5, unlockAt: 5000 },
 ];

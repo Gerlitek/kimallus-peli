@@ -1,6 +1,8 @@
-/** Nail polish station rules: four nails, points for each new nail, a bonus for finishing. */
+/** Nail polish station rules: four nails, three brush strokes each, points for each finished nail, a bonus for all four. */
 
 export const NAIL_COUNT = 4;
+/** Brush strokes, side by side, that cover one nail. */
+export const STROKES_PER_NAIL = 3;
 export const POINTS_PER_NAIL = 5;
 export const COMPLETION_BONUS = 10;
 
@@ -28,11 +30,6 @@ export function paint(nails: Nails, index: number, polishId: string): PaintResul
 
 export function isComplete(nails: Nails): boolean {
   return nails.every((n) => n !== null);
-}
-
-/** The first bare nail, or -1 when all are painted. Used by the keyboard. */
-export function nextBare(nails: Nails): number {
-  return nails.findIndex((n) => n === null);
 }
 
 /** Moves the polish selection left or right, wrapping around. */

@@ -1,10 +1,20 @@
 import { PALETTE as C } from './palette';
-import { blob, smoothClosed, softStar } from './shapes';
+import { blob, heart, smoothClosed, softStar } from './shapes';
 import { drawTwinkle, flash } from './sparkle';
-import { drawBowl } from './ui';
 
-/** A glittering, soft-faceted diamond standing on the ground. (x, groundY) is its bottom-left corner. */
-export function drawDiamond(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
+/** Gemstones by colour: diamond, emerald, ruby, sapphire, amethyst and topaz. */
+export const GEMS: ReadonlyArray<readonly [string, string, string]> = [
+  C.gem,
+  ['#c9ffe2', '#4fd69c', '#1fa97a'],
+  ['#ffc8d8', '#ff5f8f', '#d82f6a'],
+  ['#c4e4ff', '#5fa8ff', '#3a6fe0'],
+  ['#ecd4ff', '#b98aff', '#8a55e0'],
+  ['#fff3b8', '#ffd45f', '#f5a43a'],
+];
+
+/** A glittering, soft-faceted gemstone standing on the ground. (x, groundY) is its bottom-left corner. */
+export function drawDiamond(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number, variant = 0): void {
+  const colors = GEMS[variant % GEMS.length];
   const top = groundY - 62;
   const cx = x + 28;
   const seed = x * 0.013;
@@ -29,9 +39,9 @@ export function drawDiamond(ctx: CanvasRenderingContext2D, x: number, groundY: n
   // Colours shift slowly, like light moving through the stone.
   const shift = Math.sin(t * 1.5 + seed) * 20;
   const g = ctx.createLinearGradient(x - shift, top, x + 56 + shift, groundY);
-  g.addColorStop(0, C.gem[0]);
-  g.addColorStop(0.5, C.gem[1]);
-  g.addColorStop(1, C.gem[2]);
+  g.addColorStop(0, colors[0]);
+  g.addColorStop(0.5, colors[1]);
+  g.addColorStop(1, colors[2]);
   ctx.fillStyle = g;
   ctx.fill(gem);
 
@@ -107,35 +117,165 @@ export function drawCloud(ctx: CanvasRenderingContext2D, cx: number, cy: number,
   }
 }
 
-/** A rainbow bar resting on two clouds, like a hurdle. (x, groundY) is the bottom-left corner. */
+/** A round arch on short straight legs, as tall as before so the jump height is unchanged. */
+const RAINBOW = { r: 72, legs: 28 } as const;
+
+/** A rainbow arch resting on two clouds, like a hurdle. (x, groundY) is the bottom-left corner. */
 export function drawRainbowHurdle(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
   const cx = x + 90;
   const cy = groundY - 18;
+  const top = cy - RAINBOW.legs; // centre of the semicircle
   ctx.lineCap = 'round';
   C.rainbow.forEach((color, i) => {
+    const r = RAINBOW.r - i * 7;
     ctx.strokeStyle = color;
     ctx.lineWidth = 7;
     ctx.beginPath();
-    ctx.arc(cx, cy, 92 - i * 7, Math.PI, Math.PI * 2);
+    ctx.moveTo(cx - r, cy);
+    ctx.lineTo(cx - r, top);
+    ctx.arc(cx, top, r, Math.PI, Math.PI * 2);
+    ctx.lineTo(cx + r, cy);
     ctx.stroke();
   });
   // Sparkles travelling along the arc
   for (let i = 0; i < 5; i++) {
     const a = Math.PI * (1.1 + ((t * 0.25 + i / 5) % 1) * 0.8);
-    const r = 92 - (i % 3) * 14;
-    drawTwinkle(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 7, 0.3 + flash(t, 4, i * 1.3) * 0.7, '#ffffff', t + i);
+    const inset = (i % 3) * 14;
+    drawTwinkle(ctx, cx + Math.cos(a) * (RAINBOW.r - inset), top + Math.sin(a) * (RAINBOW.r - inset), 7, 0.3 + flash(t, 4, i * 1.3) * 0.7, '#ffffff', t + i);
   }
   // Clouds sit on the rainbow's feet and hide its ends.
-  drawCloud(ctx, cx - 74, groundY - 22, 38, 1);
-  drawCloud(ctx, cx + 74, groundY - 22, 38, 2);
+  drawCloud(ctx, cx - 50, groundY - 20, 32, 1);
+  drawCloud(ctx, cx + 50, groundY - 20, 32, 2);
+}
+
+/** A bowl of hot porridge left on the ground to cool, steaming. (x, groundY) is the bottom-left corner. */
+export function drawPorridge(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
+  const cx = x + 35;
+  const rim = groundY - 30;
+  // A little steam: thin and pale, so the eye goes to the porridge
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  for (const dx of [-9, 9]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx, rim - 14);
+    ctx.quadraticCurveTo(cx + dx + 5 * Math.sin(t * 2 + dx), rim - 22, cx + dx, rim - 30);
+    ctx.stroke();
+  }
+  // Bowl with a white edge
+  const bowl = new Path2D();
+  bowl.moveTo(cx - 32, rim);
+  bowl.bezierCurveTo(cx - 30, rim + 24, cx - 16, groundY, cx - 12, groundY);
+  bowl.lineTo(cx + 12, groundY);
+  bowl.bezierCurveTo(cx + 16, groundY, cx + 30, rim + 24, cx + 32, rim);
+  bowl.closePath();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  ctx.lineJoin = 'round';
+  ctx.stroke(bowl);
+  ctx.fillStyle = '#4fb6ff';
+  ctx.fill(bowl);
+  ctx.fillStyle = '#ffffff';
+  for (const dx of [-16, 0, 16]) ctx.fill(heart(cx + dx * 0.8, rim + 15, 4));
+  ctx.beginPath();
+  ctx.ellipse(cx, rim, 33, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Spoon standing in the porridge
+  ctx.strokeStyle = '#d9d2ea';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(cx + 16, rim - 4);
+  ctx.lineTo(cx + 34, rim - 26);
+  ctx.stroke();
+  // Porridge: a creamy heap with a pat of melting butter and berries on top
+  ctx.fillStyle = '#fff1cf';
+  ctx.fill(blob(cx, rim - 3, 28, 9, { seed: 4, wobble: 0.08 }));
+  ctx.fillStyle = '#f7e3b4';
+  ctx.fill(blob(cx + 4, rim - 1, 17, 4, { seed: 6 }));
+  ctx.fillStyle = '#ffd23f';
+  ctx.fill(blob(cx - 2, rim - 6, 7, 4, { seed: 2 }));
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fill(blob(cx - 4, rim - 7, 2.5, 1.4));
+  for (const [dx, dy, color] of [[-15, -4, '#e8304a'], [12, -7, '#5a6fe0'], [17, -2, '#e8304a']] as const) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx + dx, rim + dy, 3.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** A star gate to the next level: a glowing doorway with as many stars as the level it leads to. (x, bottom) is its base centre. */
+export function drawGate(ctx: CanvasRenderingContext2D, x: number, bottom: number, stars: number, t: number): void {
+  const cy = bottom - 56;
+  C.rainbow.forEach((color, i) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.ellipse(x, cy, 44 - i * 4, 62 - i * 4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  const glow = ctx.createRadialGradient(x, cy, 4, x, cy, 44);
+  glow.addColorStop(0, '#ffffff');
+  glow.addColorStop(1, '#ffe9a8');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.ellipse(x, cy, 22, 40, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ff9f1c';
+  for (let i = 0; i < stars; i++) {
+    ctx.fill(softStar(x, cy + (i - (stars - 1) / 2) * 24, 11, 5, Math.sin(t * 1.5 + i) * 0.15));
+  }
+}
+
+/** Home, the goal of the ride: a small house with a heart on the door. (x, bottom) is its base centre. */
+export function drawHome(ctx: CanvasRenderingContext2D, x: number, bottom: number, scale = 1): void {
+  ctx.save();
+  ctx.translate(x, bottom);
+  ctx.scale(scale, scale);
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  const roof = new Path2D();
+  roof.moveTo(-44, -52);
+  roof.lineTo(0, -92);
+  roof.lineTo(44, -52);
+  roof.closePath();
+  // Chimney
+  ctx.fillStyle = '#b98aff';
+  ctx.strokeRect(18, -90, 12, 24);
+  ctx.fillRect(18, -90, 12, 24);
+  ctx.strokeRect(-36, -54, 72, 54);
+  ctx.stroke(roof);
+  ctx.fillStyle = '#fff6e0';
+  ctx.fillRect(-36, -54, 72, 54);
+  ctx.fillStyle = '#ff4f9a';
+  ctx.fill(roof);
+  // Door with a heart, and a warm window
+  ctx.fillStyle = '#8f63e8';
+  ctx.beginPath();
+  ctx.roundRect(-28, -34, 22, 34, [11, 11, 0, 0]);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill(heart(-17, -19, 5));
+  ctx.fillStyle = '#ffd23f';
+  ctx.fillRect(6, -38, 20, 18);
+  ctx.strokeStyle = '#fff6e0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(16, -38);
+  ctx.lineTo(16, -20);
+  ctx.moveTo(6, -29);
+  ctx.lineTo(26, -29);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
- * "Syömään!": mum in a classic flowery dress and brown curls, waving the player in to eat,
- * a bowl of food in her other hand. She waves harder as the unicorn comes close (`excite` 0..1).
+ * "Syömään!": mum in a classic flowery dress and brown curls, waving the player in to eat.
+ * There is only one mum: she is seen once in a run, beside the first bowl of porridge, and is not an obstacle.
  * (x, groundY) is the bottom-left corner.
  */
-export function drawMom(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number, excite: number): void {
+export function drawMom(ctx: CanvasRenderingContext2D, x: number, groundY: number, t: number): void {
   const cx = x + 40;
   const gy = groundY;
   const skin = '#ffd9c2';
@@ -186,7 +326,7 @@ export function drawMom(ctx: CanvasRenderingContext2D, x: number, groundY: numbe
   ctx.fill(blob(cx + 5, gy - 61, 7, 4, { seed: 4 }));
 
   // Waving arm, up high: friendly, never toward the unicorn
-  const wave = Math.sin(t * (6 + excite * 6)) * (0.35 + excite * 0.25);
+  const wave = Math.sin(t * 3) * 0.45;
   const sx = cx + 12;
   const sy = gy - 56;
   const hx = sx + 14 + Math.sin(wave) * 10;
@@ -207,14 +347,13 @@ export function drawMom(ctx: CanvasRenderingContext2D, x: number, groundY: numbe
   ctx.fillStyle = skin;
   ctx.fill(blob(hx, hy - 2, 6, 6, { seed: 5 }));
 
-  // Other arm holds the bowl in front
+  // Other arm rests at her side
   ctx.strokeStyle = skin;
   ctx.lineWidth = 7;
   ctx.beginPath();
   ctx.moveTo(cx - 12, gy - 54);
-  ctx.quadraticCurveTo(cx - 22, gy - 40, cx - 14, gy - 34);
+  ctx.quadraticCurveTo(cx - 22, gy - 44, cx - 19, gy - 32);
   ctx.stroke();
-  drawBowl(ctx, cx - 16, gy - 34, t);
 
   // Brown curls behind and around the face
   const hy0 = gy - 80;
@@ -253,12 +392,12 @@ export function drawMom(ctx: CanvasRenderingContext2D, x: number, groundY: numbe
   ctx.globalAlpha = 1;
   ctx.fillStyle = '#e0458f';
   ctx.beginPath();
-  ctx.arc(cx, hy0 + 8, 3.6 + Math.abs(Math.sin(t * 8)) * 0.8, 0, Math.PI);
+  ctx.arc(cx, hy0 + 8, 3.6 + Math.abs(Math.sin(t * 3)) * 0.8, 0, Math.PI);
   ctx.closePath();
   ctx.fill();
 
   // Speech bubble with a bowl of food: "time to eat", without words
-  const by = gy - 132 + Math.sin(t * 6) * 3;
+  const by = gy - 132 + Math.sin(t * 2) * 3;
   ctx.fillStyle = '#ffffff';
   ctx.strokeStyle = '#a9d8ff';
   ctx.lineWidth = 3;
@@ -270,7 +409,11 @@ export function drawMom(ctx: CanvasRenderingContext2D, x: number, groundY: numbe
   ctx.fill();
   ctx.stroke();
   ctx.fillRect(cx - 5, by + 15, 12, 6);
-  drawBowl(ctx, cx, by + 4, t);
+  ctx.save();
+  ctx.translate(cx, by + 14);
+  ctx.scale(0.5, 0.5);
+  drawPorridge(ctx, -35, 0, t);
+  ctx.restore();
 }
 
 /**

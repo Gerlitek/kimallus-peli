@@ -27,10 +27,11 @@ export interface PhysicsConfig {
 }
 
 export const PHYSICS: PhysicsConfig = {
-  gravity: 2600,
-  jumpVelocity: 820,
+  // A slow, floaty jump: easy to follow and to time.
+  gravity: 1500,
+  jumpVelocity: 640,
   holdGravityScale: 0.45,
-  maxHold: 0.32,
+  maxHold: 0.4,
 };
 
 export interface StepResult {

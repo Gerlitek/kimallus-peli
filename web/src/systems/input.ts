@@ -15,6 +15,7 @@ export class Input {
   private tap: Tap | null = null;
   private keys: string[] = [];
   private shootFlag = false;
+  private quitFlag = false;
 
   constructor(target: HTMLElement, width: number, height: number, shootButton?: HTMLElement | null) {
     const actionKeys = new Set(['Space', 'ArrowUp', 'KeyW', 'Enter']);
@@ -23,6 +24,8 @@ export class Input {
       if (actionKeys.has(e.code)) {
         e.preventDefault();
         if (!e.repeat) this.press();
+      } else if (e.code === 'Escape') {
+        this.quitFlag = true;
       } else if (e.code === 'KeyX') {
         e.preventDefault();
         if (!e.repeat) this.shootFlag = true;
@@ -65,6 +68,13 @@ export class Input {
     const p = this.pressedFlag;
     this.pressedFlag = false;
     return p;
+  }
+
+  /** True once when Esc was pressed: leave the game. (In full screen the browser uses the first Esc itself.) */
+  takeQuit(): boolean {
+    const q = this.quitFlag;
+    this.quitFlag = false;
+    return q;
   }
 
   /** True once per shot. */

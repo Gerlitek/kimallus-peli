@@ -62,46 +62,70 @@ Kolme sääntöä pitävät koodin selitettävänä:
 | Kohtaus | Sisältö |
 |---|---|
 | Menu | nimimerkin arvonta, aloitus |
-| Ride | juoksupeli: yksisarvinen hyppii esteiden yli, kissa ampuu hännästä sydämiä, kuppikakut keräillään |
-| Station | rauhallinen minipeli ratsastuksen päällä, ratsastus pysähtyy. Tehty: kynsien lakkaus (7 lakkaa, myös metalli- ja kimallelakat; 5 pistettä per kynsi, 10 bonusta kaikista neljästä). Tulossa: harja ja klipsit, sydänsipsit, figuurit jos aikaa |
+| Ride | juoksupeli: yksisarvinen hyppii esteiden yli, kissa ampuu hännästä sydämiä, tähtiä keräillään |
+| Station | rauhallinen minipeli ratsastuksen päällä, ratsastus pysähtyy. Tehty: kynsien lakkaus lähikuvassa (7 lakkaa, myös metalli- ja kimallelakat; kolme siveltimenvetoa per kynsi, 5 pistettä per valmis kynsi, 10 bonusta kaikista neljästä). Tehty myös: harjaklipsit (5 klipsiä: sydän, tähti, rusetti, kukka, jalokivi; samat pisteet kuin kynsissä). Pisteet vuorottelevat radalla. Tulossa ehkä: figuurit |
 | Story | tarinalauseet nousevat pilvissä ylöspäin; tunnehetket (esim. jakaminen) |
 | End | tulos, pistetaulukko |
 
 ### Esteet
 | Este | Mekaniikka |
 |---|---|
-| Timantti | lyhyt hyppy |
+| Jalokivi | lyhyt hyppy. Kuusi väriä: timantti, smaragdi, rubiini, safiiri, ametisti ja topaasi |
 | Timanttijoki | matala mutta pitkä, hitaalla nopeudella vaatii pidon |
 | Sateenkaaripuomi pilvien päällä | korkea hyppy, vaatii pidon |
-| "Syömään!"-äiti | kukkamekko ja ruskeat kiharat, vilkuttaa ja pitää ruokakulhoa (kuplassa kulho). Lyhyt hyppy oikeaan aikaan; ohituksen jälkeen kissasta pöllähtää sydämiä |
+| Puurokulho | äiti on jättänyt kuuman puuron jäähtymään: kulhossa näkyy puuro, voisilmä, marjat ja lusikka. Lyhyt hyppy, tulee harvoin (paino 0,7) |
 
-Jokaisen esteen hyppytyyppi (`jump: 'tap' | 'hold'`) on datassa, ja testi varmistaa, että este ylittyy luvatulla hypyllä sekä hitaimmalla että suurimmalla nopeudella 25 % pelivaralla, koska lapsen ajoitus ei ole täydellinen.
+Äitejä on vain yksi: hän näkyy kerran pelikerrassa ensimmäisen puurokulhon takana vilkuttamassa (kuplassa kulho). Äiti ei ole este, yksisarvinen kulkee hänen editseen.
 
-Tunnehetki (`scenes/share-moment.ts`): kuuden kerätyn kuppikakun jälkeen radalle tulee iso hehkuva erikoiskuppikakku nuolen kanssa, kuten kynsilakkapullo. Siihen juoksemalla pääsee jakamaan, yli hyppäämällä sen ohittaa (tulee myöhemmin uudelleen). Kissalla on lautasella kaksi kuppikakkua, tähtiystävän lautanen on tyhjä ja sen ajatuskuplassa on kuppikakku. Kissan kasvot ja tunnepilvi ovat surulliset, nuoli kehottaa antamaan. Napautuksella toinen kuppikakku lentää kaarena ystävän lautaselle, molemmat syövät kolmella haukulla ja ilahtuvat (+15 kimallusta). Tarkoituksella rauhallinen: ei taustavälkkeitä eikä räjähdyksiä. Kerran pelikerrassa.
+Jokaisen esteen hyppytyyppi (`jump: 'tap' | 'hold'`) on datassa, ja testi varmistaa, että este ylittyy luvatulla hypyllä jokaisen tason nopeudella 25 % pelivaralla, koska lapsen ajoitus ei ole täydellinen. Sateenkaari on korkeampi kuin leveä, jotta hidas hyppy ylittää sen myös silmämääräisesti.
 
-Kynsien lakkaus: valmiin kavion jälkeen yksisarvinen pomppaa ja kavioon ilmestyy sydän- tai tähtitarra. Kun kaikki neljä on lakattu, yksisarvinen tanssii ja kimallusta sataa.
+### Tasot ja maali
+Tasot ovat dataa (`data/levels.ts`): nopeus, esteiden väli ja se, onko taso lempeä.
+
+| Taso | Nopeus | Esteiden väli | Osuma esteeseen |
+|---|---|---|---|
+| 1 | 210 px/s | 3–4,5 s | yksisarvinen kompastuu ja hidastaa hetken, peli jatkuu |
+| 2 | 290 px/s | 2,4–3,6 s | kierros päättyy |
+| 3 | 370 px/s | 1,9–2,9 s | kierros päättyy |
+
+- Tason 1 portti tulee aikaisintaan 14000 px:n kohdalla (reilu minuutti juoksua) ja vasta, kun kierroksella on käyty kahdessa rauhoittumispisteessä ja äiti on nähty. Jos puuro ei ole arvonnassa tullut 8000 px:iin mennessä, se tulee seuraavaksi. Tasoilla 2 ja 3 portti tai koti tulee 8000 px:n jälkeen.
+- Nopeus on tasolla tasainen. Tasolla 1 saa viipyä niin kauan kuin haluaa.
+- Seuraavalle tasolle pääsee tähtiportista, joka toimii kuten muut poimittavat: juokse läpi tai hyppää yli. Portissa on yhtä monta tähteä kuin tasolla, jolle se vie. Yli hypätty portti palaa 4000 px:n päästä.
+- Viimeisen tason portin tilalla on koti, maali. Siellä äiti odottaa puuron kanssa (`scenes/home-moment.ts`, +50 kimallusta), ja kierros päättyy iloisesti.
+- Jokainen kierros alkaa tasolta 1, joten vahingossa valittu nopea taso ei jää päälle.
+- Taso näkyy pelissä tähtinä yläreunassa ja lopputuloskortissa; kotiin päässeellä on kortissa talo.
+- Pistetaulukkoon (vaihe 4) tallennetaan pisteiden lisäksi saavutettu taso ja maaliin pääsy.
+
+Tunnehetki (`scenes/share-moment.ts`): kuuden kerätyn tähden jälkeen radalle tulee iso hehkuva kuppikakku nuolen kanssa, kuten kynsilakkapullo. Se on radan ainoa herkku. Siihen juoksemalla pääsee jakamaan, yli hyppäämällä sen ohittaa (tulee myöhemmin uudelleen). Lautasella on yksi kuppikakku, ja tähtiystävän ajatuskuplassa on kuppikakku. Painalluksesta kuppikakku jakautuu kahtia, kumpikin saa puolikkaan, ystävä leijuu lähemmäs ja he syövät yhdessä neljä hidasta haukkua (+15 kimallusta). Ei surullista vaihetta: se hämmensi. Kerran pelikerrassa.
+
+Kynsien lakkaus (`scenes/nail-station.ts`): kaviot näkyvät lähikuvassa samalla piirtokoodilla kuin muualla, vain isommalla mittakaavalla. Jokainen painallus on yksi siveltimenveto: kaksi ensimmäistä ovat hitaita (1,1 s), loput nopeampia (0,6 s), ettei monivärinen kynsi käy tylsäksi. Kavio valmistuu kolmella vierekkäisellä vedolla. Vedot jäävät näkyviin raitoina, ja lakkaa voi vaihtaa vetojen välissä. Valmiiseen kavioon ilmestyy sydän- tai tähtitarra. Kun kaikki neljä on lakattu, kuva loittonee ja yksisarvinen hypähtelee hitaasti.
+
+Harjaklipsit (`scenes/mane-station.ts`): lähikuva harjasta, kissa katsoo vieressä. Painalluksesta valittu klipsi leijuu hitaasti seuraavaan harjatupsuun. Kun kaikissa viidessä on klipsi, kuva loittonee. Klipsit ja lakatut kaviot pysyvät yksisarvisella radalla koko käynnin ajan. Säännöt ovat samat kuin kynsissä, joten ne tulevat `logic/nails.ts`:stä.
 
 Aloitus ja jatkaminen: ei kehotekuvia. Aloitusnäkymässä yksisarvinen pomppii, ja peli alkaa mistä tahansa painalluksesta. Tunnehetket jatkuvat itsestään. Aikuisten vihje pienenä pelialueen alareunassa.
 
 Sydämet: kissa ampuu hännästä sydämiä (X, hiiren oikea tai kosketusnäytön sydännappi) viistosti ylös. Taivaalla leijuu surullisia harmaita pilviä. Osuma muuttaa pilven iloiseksi (hymy, sydänsilmät, halaus tai tähtisilmät), ja se leijuu pois. Säännöt `logic/hearts.ts`.
 
-Kuppikakut: kaarena esteen yllä (kerätään hyppäämällä yli) tai rivinä maassa. Päällä vuorotellen sydän tai tähti. Säännöt `logic/cupcakes.ts`.
+Tähdet: kaarena esteen yllä (kerätään hyppäämällä yli) tai rivinä maassa. Säännöt `logic/stars.ts`. Herkkuja ei keräillä: ainoa kuppikakku on se, joka jaetaan.
 
 ### Kuvat ensin
 Pelaajat ovat pieniä lapsia, jotka eivät vielä lue. Pelin sisällä asiat kerrotaan ilmeillä ja kuvilla: surullinen ja iloinen kasvo, ajatuskupla, nuoli, iso ▶-nappi, ruokakulho. Tekstiä on vain aloitussivun ohjeissa vanhemmille ja pienenä vihjeenä korteissa.
 
 ### Rauhallinen ja turvallinen
-Pieni lapsi pelaa: ruudulla tapahtuu vähän kerrallaan. Ei nopeaa välkkymistä, kaikki kirkkauden muutokset ovat hitaita. Teema näkyy silti: pulleat pastellitähdet, pehmeästi tuikkivat kimallukset ja vähän hiljaa leijuvaa glitteriä. Esteiden väli 1,6–2,6 s, pilviä 5–8 s välein, valopalloja enintään 3 kerrallaan. Ei kehotteita painaa: peli alkaa mistä tahansa painalluksesta, ja tunnehetket jatkuvat itsestään.
+Pieni lapsi pelaa: ruudulla tapahtuu vähän kerrallaan. Ei nopeaa välkkymistä, kaikki kirkkauden muutokset ovat hitaita. Teema näkyy silti: pulleat pastellitähdet, pehmeästi tuikkivat kimallukset ja vähän hiljaa leijuvaa glitteriä. Tahti on hidas, koska pelaaja on noin nelivuotias: tasolla 1 nopeus 210 px/s ja esteiden väli 3–4,5 s (ks. Tasot ja maali), hyppy on leijuva (lyhyt noin 0,85 s, pitkä noin 1,2 s), pilviä 5–8 s välein, valopalloja enintään 3 kerrallaan. Ei nopeita palkintoryöppyjä: kimallusta tulee muutama hiutale kerrallaan, ja liikkeet alkavat ja päättyvät pehmeästi (`logic/ease.ts`). Ei kehotteita painaa: peli alkaa mistä tahansa painalluksesta, ja tunnehetket jatkuvat itsestään.
 
 ### Kimallus (pisteet)
 Pisteitä kutsutaan tekstissä kimallukseksi ("+15 kimallusta"). Pelissä ne näkyvät hehkuvina valopalloina (koodissa lumen, valon yksikkö), jotka lentävät laskuriin, ja laskurin kuvake sykähtää. Sana lumen ei näy pelaajalle ilman selitystä.
 
 | Lähde | Kimallusta |
 |---|---|
-| Matka | 1 per 200 px (noin 2 sekunnissa) |
-| Kuppikakku | 5 |
+| Matka | 1 per 200 px (noin sekunnissa) |
+| Tähti | 5 |
+| Jaettu kuppikakku | 15 |
+| Koti (maali) | 50 |
 | Iloinen pilvi | 10 |
 | Kynsien lakkaus | 5 per kynsi, 10 bonusta kaikista |
+| Harjaklipsit | 5 per klipsi, 10 bonusta kaikista |
 
 Miljöö: pinkki, kimalteleva tähtimaailma ja asteroidit. Termi *stellar* (loistava, tähtien) vilahtaa pelissä esim. asteroidikentän tai saavutuksen nimenä.
 

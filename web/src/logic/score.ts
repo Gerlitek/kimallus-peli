@@ -1,11 +1,3 @@
-export const START_SPEED = 300;
-export const MAX_SPEED = 500;
-
-/** Running speed in pixels per second after t seconds. */
-export function speedAt(t: number): number {
-  return Math.min(MAX_SPEED, START_SPEED + 4 * t);
-}
-
 /**
  * Score is counted in lumens, the unit of light. Most light comes from what you collect
  * and from cheering clouds up; the ride itself gives only a little.
@@ -13,7 +5,7 @@ export function speedAt(t: number): number {
 export const LUMENS = {
   /** Distance for one lumen. */
   distancePerLumen: 200,
-  cupcake: 5,
+  star: 5,
   cloud: 10,
 } as const;
 

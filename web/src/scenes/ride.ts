@@ -1,17 +1,21 @@
 import { Background } from '../art/background';
+import { drawClip } from '../art/clips';
 import { drawCupcake } from '../art/cupcake';
 import { drawHeartShot, drawMoodCloud } from '../art/moods';
-import { drawBottle, fillPolish } from '../art/nails';
-import { drawDiamond, drawMom, drawRainbowHurdle, drawRiver } from '../art/props';
+import { drawBottle, fillCoats } from '../art/nails';
+import { drawDiamond, drawGate, drawHome, drawMom, drawPorridge, drawRainbowHurdle, drawRiver, GEMS } from '../art/props';
 import { drawTwinkle, flash } from '../art/sparkle';
+import { softStar } from '../art/shapes';
+import { drawStar } from '../art/star';
 import { drawDownArrow } from '../art/ui';
-import { heart } from '../art/shapes';
-import { fallCard, playCard } from './cards';
-import { drawUnicorn } from '../art/unicorn';
+import { endCard, playCard } from './cards';
+import { drawUnicorn, type Decor } from '../art/unicorn';
 import { OBSTACLES, type ObstacleDef } from '../data/obstacles';
+import type { ClipKind } from '../data/clips';
+import { GATE_RETRY, LEVELS, MOM_BY, STATIONS_BEFORE_GATE } from '../data/levels';
 import { POLISHES } from '../data/polishes';
 import { overlaps, type Box } from '../logic/collision';
-import { arcOver, CUPCAKE, planCupcakes, ROW } from '../logic/cupcakes';
+import { arcOver, planStars, ROW, STAR } from '../logic/stars';
 import {
   CLOUD,
   cloudY,
@@ -25,36 +29,34 @@ import {
   type Heart,
   type Mood,
 } from '../logic/hearts';
-import { bareNails, type Nails } from '../logic/nails';
 import { restingRider, stepRider, type Rider } from '../logic/physics';
 import { seeded, type Rng } from '../logic/random';
-import { FIRST_STATION_AT, LUMENS, scoreFor, speedAt, START_SPEED, STATION_EVERY, STATION_RETRY } from '../logic/score';
+import { FIRST_STATION_AT, LUMENS, scoreFor, STATION_EVERY, STATION_RETRY } from '../logic/score';
 import { gapAfter, pickObstacle } from '../logic/spawn';
 import type { Input } from '../systems/input';
 import { LumenOrbs } from '../systems/lumens';
 import { Particles } from '../systems/particles';
 import { loadBest, saveBest } from '../systems/storage';
+import { HomeMoment } from './home-moment';
+import { ManeStation } from './mane-station';
 import { NailStation } from './nail-station';
 import { ShareMoment } from './share-moment';
 import { GROUND_Y, HEIGHT, WIDTH, type Scene } from './scene';
 
 type Phase = 'ready' | 'running' | 'fallen';
+/** Things on the track that open a calm moment. */
+type PickupKind = 'polish' | 'clip' | 'share' | 'gate' | 'home';
 
 interface Obstacle {
   def: ObstacleDef;
   x: number;
-  /** Set once the unicorn is past it. */
-  passed?: boolean;
+  /** Which gemstone a diamond is. */
+  variant: number;
+  /** Already bumped into on a gentle level: it does not trip the unicorn twice. */
+  bumped?: boolean;
 }
 
-/** A little heart that floats up and fades: the cat's happy answer, without words. */
-interface Floater {
-  x: number;
-  y: number;
-  life: number;
-}
-
-interface Cupcake {
+interface Star {
   x: number;
   /** Bottom edge's height above the ground. */
   h: number;
@@ -79,14 +81,15 @@ const TAIL_TIP = { dx: -50, dy: -142 };
 /** Where the lumen counter sits on screen; light orbs fly there. */
 const COUNTER = { x: 34, y: 30 };
 /** How long the fall is shown before returning to the start screen. */
-const FALL_SHOW = 1.6;
+const FALL_SHOW = 2.5;
 /** Ignores presses right after returning, so a late jump does not start a new game by accident. */
 const READY_GUARD = 0.5;
 /** Sad clouds drift slower than the ground: they are far away. */
 const CLOUD_DRIFT = 0.5;
-/** The special sharing cupcake appears after this many cupcakes in a run. */
+/** Mum stands this far to the right of her bowl's left edge. */
+const MOM_BEHIND = 70;
+/** The cupcake to share appears after this many stars in a run. */
 const SHARE_AFTER = 6;
-
 
 export interface RideHud {
   score(value: number): void;
@@ -106,16 +109,26 @@ export class RideScene implements Scene {
   private phase: Phase = 'ready';
   private rider: Rider = restingRider();
   private obstacles: Obstacle[] = [];
-  private cupcakes: Cupcake[] = [];
+  private stars: Star[] = [];
+  /** There is only one mum: she is seen once in a run, beside the first bowl of porridge. */
+  private mom: { x: number } | null = null;
+  private momSeen = false;
   private hearts: Heart[] = [];
   private clouds: SkyCloud[] = [];
   private nextSpawnIn = 0;
   private nextCloud = 0;
   private shootCooldown = 0;
   private time = 0;
-  private runTime = 0;
   private distance = 0;
-  private speed = START_SPEED;
+  private speed = LEVELS[0].speed;
+  /** Index into LEVELS. Every run starts from the first, calm level. */
+  private level = 0;
+  private nextGateAt = LEVELS[0].gateAfter;
+  private stationsThisRun = 0;
+  /** 1 right after bumping into something on a gentle level, fading to 0: the unicorn slows for a moment. */
+  private stumble = 0;
+  /** The run ended at home, not in a fall. */
+  private home = false;
   private run = 0;
   private squash = 0;
   private fallTime = 0;
@@ -123,20 +136,22 @@ export class RideScene implements Scene {
   private best = loadBest();
   private readonly glitter = new Particles();
   private readonly orbs: LumenOrbs;
-  /** Lumens collected in this run (cupcakes, clouds, stations). */
+  /** Lumens collected in this run (stars, clouds, stations). */
   private bonus = 0;
-  /** A polish bottle on the track: running into it opens the nail station. */
   /** Something special on the track: running into it opens a calm moment, jumping over skips it. */
-  private pickup: { x: number; kind: 'polish' | 'share' } | null = null;
+  private pickup: { x: number; kind: PickupKind } | null = null;
   private nextShareAt = 0;
   private nextStationAt = FIRST_STATION_AT;
-  /** A calm moment over the paused ride: the nail station or the sharing moment. */
-  private pause: NailStation | ShareMoment | null = null;
-  private cupcakesEaten = 0;
+  /** A calm moment over the paused ride: a station or the sharing moment. */
+  private pause: NailStation | ManeStation | ShareMoment | HomeMoment | null = null;
+  /** Stations visited during this visit: nails and mane take turns. */
+  private stationsVisited = 0;
+  private starsCollected = 0;
   private shared = false;
-  private floaters: Floater[] = [];
   /** Painted hooves stay for the rest of the visit, also in later runs. */
-  private hooves: Nails = bareNails();
+  private hooves: readonly (readonly string[])[] = [[], [], [], []];
+  /** Clips in the mane stay too. */
+  private clips: readonly (string | null)[] = [];
 
   constructor(private readonly hud: RideHud) {
     this.orbs = new LumenOrbs(COUNTER, () => hud.pulse());
@@ -158,14 +173,20 @@ export class RideScene implements Scene {
     this.rng = seeded(Date.now());
     this.rider = restingRider();
     this.obstacles = [];
-    this.cupcakes = [];
+    this.stars = [];
+    this.mom = null;
+    this.momSeen = false;
     this.hearts = [];
     this.clouds = [];
     this.nextSpawnIn = 600;
     this.nextCloud = 1.5;
-    this.runTime = 0;
     this.distance = 0;
-    this.speed = START_SPEED;
+    this.speed = LEVELS[0].speed;
+    this.level = 0;
+    this.nextGateAt = LEVELS[0].gateAfter;
+    this.stationsThisRun = 0;
+    this.stumble = 0;
+    this.home = false;
     this.squash = 0;
     this.fallTime = 0;
     this.glitter.clear();
@@ -174,12 +195,20 @@ export class RideScene implements Scene {
     this.pickup = null;
     this.nextStationAt = FIRST_STATION_AT;
     this.pause = null;
-    this.cupcakesEaten = 0;
+    this.starsCollected = 0;
     this.shared = false;
     this.nextShareAt = 0;
-    this.floaters = [];
     this.hud.score(0);
   }
+
+  /** Painted hooves and clips: the same on the ride and in every calm moment. */
+  private readonly decor: Decor = (t) => ({
+    hoof: (c, path, box, i) => fillCoats(c, path, box, this.hooves[i], t, i * 17 + 3, 3),
+    clip: (c, x, y, r, i) => {
+      const kind = this.clips[i] as ClipKind | null | undefined;
+      if (kind) drawClip(c, x, y, r * 0.62, kind);
+    },
+  });
 
   private get score(): number {
     return scoreFor(this.distance, this.bonus);
@@ -194,13 +223,18 @@ export class RideScene implements Scene {
 
   update(dt: number, input: Input): void {
     this.time += dt;
+    // Esc leaves the game and returns to the start screen.
+    if (input.takeQuit() && this.phase !== 'ready') {
+      this.hud.ended();
+      this.enter();
+      return;
+    }
     this.orbs.update(dt);
     if (this.pause) {
       input.takeShoot();
       if (this.pause.update(dt, input)) this.leavePause();
       return;
     }
-    this.floaters = this.floaters.map((f) => ({ ...f, y: f.y - 35 * dt, life: f.life - dt })).filter((f) => f.life > 0);
 
     // Positions and arrow keys are only used by stations; drop them here.
     input.takeTap();
@@ -211,9 +245,9 @@ export class RideScene implements Scene {
 
     if (this.phase === 'ready') {
       this.readyTime += dt;
-      this.run += dt * 4;
-      // Waiting to go: the unicorn hops happily on the spot.
-      const hop = Math.max(0, Math.sin(this.time * 4)) * 34;
+      this.run += dt * 2.5;
+      // Waiting to go: the unicorn hops gently on the spot.
+      const hop = Math.max(0, Math.sin(this.time * 2.5)) * 30;
       this.rider = { ...restingRider(), y: hop, grounded: hop < 1 };
       if (pressed && this.readyTime > READY_GUARD) {
         this.reset();
@@ -235,9 +269,11 @@ export class RideScene implements Scene {
       return;
     }
 
-    this.runTime += dt;
-    this.speed = speedAt(this.runTime);
-    const dx = this.speed * dt;
+    // The speed is steady on a level and glides to the new one after a gate.
+    const level = LEVELS[this.level];
+    this.speed += (level.speed - this.speed) * Math.min(1, dt * 1.5);
+    this.stumble = Math.max(0, this.stumble - dt);
+    const dx = this.speed * (1 - 0.6 * this.stumble) * dt;
     this.distance += dx;
     this.run += dt * (this.speed / 30);
 
@@ -252,28 +288,23 @@ export class RideScene implements Scene {
     this.shootHearts(dt, shoot);
     this.updateClouds(dt, this.speed);
 
-    for (const o of this.obstacles) {
-      o.x -= dx;
-      if (!o.passed && o.x + o.def.width < UNICORN_X - 30) {
-        o.passed = true;
-        // Past the call to come and eat: the cat giggles little hearts.
-        if (o.def.kind === 'mom') {
-          for (let i = 0; i < 4; i++) {
-            this.floaters.push({ x: UNICORN_X - 40 + i * 18, y: GROUND_Y - 170 - this.rider.y - (i % 2) * 14, life: 1.4 + i * 0.1 });
-          }
-        }
-      }
-    }
+    for (const o of this.obstacles) o.x -= dx;
     this.obstacles = this.obstacles.filter((o) => o.x + o.def.width > -20);
-    for (const c of this.cupcakes) c.x -= dx;
-    this.cupcakes = this.cupcakes.filter((c) => c.x > -30);
+    for (const s of this.stars) s.x -= dx;
+    this.stars = this.stars.filter((s) => s.x > -30);
+    if (this.mom) {
+      this.mom.x -= dx;
+      if (this.mom.x < -120) this.mom = null;
+    }
 
     if (this.pickup) {
       this.pickup.x -= dx;
       if (this.pickup.x < -60) {
         // Skipped: it comes back a little later.
-        if (this.pickup.kind === 'polish') this.nextStationAt = this.distance + STATION_RETRY;
-        else this.nextShareAt = this.distance + STATION_RETRY;
+        const kind = this.pickup.kind;
+        if (kind === 'gate' || kind === 'home') this.nextGateAt = this.distance + GATE_RETRY;
+        else if (kind === 'share') this.nextShareAt = this.distance + STATION_RETRY;
+        else this.nextStationAt = this.distance + STATION_RETRY;
         this.pickup = null;
       }
     }
@@ -282,14 +313,23 @@ export class RideScene implements Scene {
     if (this.nextSpawnIn <= 0) this.spawn();
 
     const me: Box = { x: UNICORN_X + RIDER_HIT.dx, y: this.rider.y, w: RIDER_HIT.w, h: RIDER_HIT.h };
-    this.collectCupcakes(me);
+    this.collectStars(me);
     if (this.pickup && overlaps(me, { x: this.pickup.x - 24, y: 0, w: 48, h: 110 })) {
-      if (this.pickup.kind === 'polish') this.enterStation();
-      else this.enterShare();
+      const kind = this.pickup.kind;
+      if (kind === 'gate') this.enterLevel();
+      else if (kind === 'home') this.enterHome();
+      else if (kind === 'share') this.enterShare();
+      else this.enterStation(kind);
       return;
     }
-    if (this.obstacles.some((o) => overlaps(me, { x: o.x + o.def.hit.dx, y: 0, w: o.def.hit.w, h: o.def.hit.h }))) {
-      this.fall();
+    const hit = this.obstacles.find((o) => !o.bumped && overlaps(me, { x: o.x + o.def.hit.dx, y: 0, w: o.def.hit.w, h: o.def.hit.h }));
+    if (hit && level.gentle) {
+      // On a gentle level nothing ends: the unicorn stumbles, slows for a moment and carries on.
+      hit.bumped = true;
+      this.stumble = 1;
+      this.squash = 1;
+    } else if (hit) {
+      this.end(false);
       return;
     }
 
@@ -298,38 +338,50 @@ export class RideScene implements Scene {
 
   private spawn(): void {
     // A special pickup takes an obstacle's place, so it never sits on top of one.
-    const share = !this.shared && this.cupcakesEaten >= SHARE_AFTER && this.distance >= this.nextShareAt;
-    const polish = this.distance >= this.nextStationAt;
-    if (!this.pickup && (share || polish)) {
-      this.pickup = { x: WIDTH + 40, kind: share ? 'share' : 'polish' };
-      this.nextSpawnIn = 60 + gapAfter(this.speed, this.rng);
+    const share = !this.shared && this.starsCollected >= SHARE_AFTER && this.distance >= this.nextShareAt;
+    const station = this.distance >= this.nextStationAt;
+    // No hurry on the first level: its gate waits until the stations and mum have been met.
+    const explored = this.level > 0 || (this.momSeen && this.stationsThisRun >= STATIONS_BEFORE_GATE);
+    const gate = explored && this.distance >= this.nextGateAt;
+    const gap = LEVELS[this.level].gap;
+    if (!this.pickup && (share || station || gate)) {
+      const calm = this.stationsVisited % 2 === 0 ? 'polish' : 'clip';
+      // After the last level the gate is home, the goal.
+      const onward = this.level < LEVELS.length - 1 ? 'gate' : 'home';
+      this.pickup = { x: WIDTH + 40, kind: share ? 'share' : station ? calm : onward };
+      this.nextSpawnIn = 60 + gapAfter(this.speed, this.rng, gap);
       return;
     }
-    const def = pickObstacle(OBSTACLES, this.distance, this.rng);
+    const overdue = !this.momSeen && this.distance >= MOM_BY ? OBSTACLES.find((o) => o.kind === 'porridge') : undefined;
+    const def = overdue ?? pickObstacle(OBSTACLES, this.distance, this.rng);
     const x = WIDTH + 40;
-    const gap = gapAfter(this.speed, this.rng);
-    this.obstacles.push({ def, x });
-    this.nextSpawnIn = def.width + gap;
+    const after = gapAfter(this.speed, this.rng, gap);
+    this.obstacles.push({ def, x, variant: Math.floor(this.rng() * GEMS.length) });
+    this.nextSpawnIn = def.width + after;
+    if (def.kind === 'porridge' && !this.momSeen) {
+      this.momSeen = true;
+      this.mom = { x: x + MOM_BEHIND };
+    }
 
-    const plan = planCupcakes(this.rng);
+    const plan = planStars(this.rng);
     const seed = Math.floor(this.rng() * 1000);
     if (plan === 'arc') {
       const centre = x + def.hit.dx + def.hit.w / 2;
-      arcOver(def.kind).forEach((s, i) => this.cupcakes.push({ x: centre + s.dx, h: s.h, seed: seed + i }));
+      arcOver(def.kind).forEach((s, i) => this.stars.push({ x: centre + s.dx, h: s.h, seed: seed + i }));
     } else if (plan === 'row') {
-      const start = x + def.width + gap * 0.35;
-      ROW.forEach((s, i) => this.cupcakes.push({ x: start + s.dx, h: s.h, seed: seed + i }));
+      const start = x + def.width + after * 0.35;
+      ROW.forEach((s, i) => this.stars.push({ x: start + s.dx, h: s.h, seed: seed + i }));
     }
   }
 
-  private collectCupcakes(me: Box): void {
-    this.cupcakes = this.cupcakes.filter((c) => {
-      const hit = overlaps(me, { x: c.x - CUPCAKE.w / 2, y: c.h, w: CUPCAKE.w, h: CUPCAKE.h });
+  private collectStars(me: Box): void {
+    this.stars = this.stars.filter((c) => {
+      const hit = overlaps(me, { x: c.x - STAR.w / 2, y: c.h, w: STAR.w, h: STAR.h });
       if (hit) {
-        const sy = GROUND_Y - c.h - 20;
-        this.award(LUMENS.cupcake, c.x, sy);
-        this.cupcakesEaten += 1;
-        for (let i = 0; i < 4; i++) this.glitter.emit(c.x, sy, this.rng, { spread: 24, speed: 70, size: 5 });
+        const sy = GROUND_Y - c.h - 17;
+        this.award(LUMENS.star, c.x, sy);
+        this.starsCollected += 1;
+        for (let i = 0; i < 3; i++) this.glitter.emit(c.x, sy, this.rng, { spread: 24, speed: 50, size: 5 });
       }
       return !hit;
     });
@@ -372,13 +424,32 @@ export class RideScene implements Scene {
     this.clouds = this.clouds.filter((c) => c.x > -80 && c.joy < 2.5);
   }
 
-  private enterStation(): void {
+  private enterStation(kind: 'polish' | 'clip'): void {
     this.pickup = null;
+    this.stationsVisited += 1;
+    this.stationsThisRun += 1;
     this.nextStationAt = this.distance + STATION_EVERY;
     this.rider = restingRider();
     this.glitter.clear();
     this.hearts = [];
-    this.pause = new NailStation(this.rng, this.pauseHud());
+    this.pause = kind === 'polish' ? new NailStation(this.rng, this.pauseHud(), this.decor) : new ManeStation(this.rng, this.pauseHud(), this.decor);
+  }
+
+  /** Through the gate: the next level begins. Its own gate comes after a while. */
+  private enterLevel(): void {
+    this.pickup = null;
+    this.level += 1;
+    this.nextGateAt = this.distance + LEVELS[this.level].gateAfter;
+    for (let i = 0; i < 6; i++) this.glitter.emit(UNICORN_X, GROUND_Y - 80, this.rng, { spread: 90, speed: 40, size: 7, life: 1.4 });
+  }
+
+  /** Home after the last level: a calm moment with mum, and then the run ends happily. */
+  private enterHome(): void {
+    this.pickup = null;
+    this.rider = restingRider();
+    this.glitter.clear();
+    this.hearts = [];
+    this.pause = new HomeMoment(this.pauseHud(), this.decor);
   }
 
   private pauseHud() {
@@ -388,26 +459,34 @@ export class RideScene implements Scene {
     };
   }
 
-  /** Once per run: after sharing, the special cupcake does not come again. */
+  /** Once per run: after sharing, the cupcake does not come again. */
   private enterShare(): void {
     this.pickup = null;
     this.shared = true;
     this.rider = restingRider();
     this.glitter.clear();
     this.hearts = [];
-    this.pause = new ShareMoment(this.rng, this.pauseHud());
+    this.pause = new ShareMoment(this.rng, this.pauseHud(), this.decor);
   }
 
   private leavePause(): void {
     if (this.pause instanceof NailStation) this.hooves = this.pause.painted;
+    if (this.pause instanceof ManeStation) this.clips = this.pause.placed;
+    const home = this.pause instanceof HomeMoment;
     this.pause = null;
+    if (home) {
+      this.end(true);
+      return;
+    }
     // Clear the track just ahead, so the ride does not continue straight into an obstacle.
     this.obstacles = this.obstacles.filter((o) => o.x > UNICORN_X + 500);
     this.nextSpawnIn = Math.max(this.nextSpawnIn, 300);
   }
 
-  private fall(): void {
+  /** The run is over: a fall, or home at the goal. */
+  private end(home: boolean): void {
     this.phase = 'fallen';
+    this.home = home;
     this.fallTime = 0;
     this.hearts = [];
     const score = this.score;
@@ -417,7 +496,7 @@ export class RideScene implements Scene {
       saveBest(score);
       this.hud.best(score);
     }
-    this.hud.message(fallCard(score, record));
+    this.hud.message(endCard(score, record, this.level + 1, home));
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
@@ -430,20 +509,18 @@ export class RideScene implements Scene {
     }
     ctx.globalAlpha = 1;
 
+    const gy = GROUND_Y + 4;
+    // Mum stands a step back from the track, behind her bowl: the unicorn passes in front of her.
+    if (this.mom) drawMom(ctx, this.mom.x, gy - 10, t);
     for (const o of this.obstacles) {
-      const gy = GROUND_Y + 4;
-      if (o.def.kind === 'diamond') drawDiamond(ctx, o.x, gy, t);
+      if (o.def.kind === 'diamond') drawDiamond(ctx, o.x, gy, t, o.variant);
       else if (o.def.kind === 'rainbow') drawRainbowHurdle(ctx, o.x, gy, t);
       else if (o.def.kind === 'river') drawRiver(ctx, o.x, gy, t);
-      else {
-        // She waves harder as the unicorn comes close.
-        const excite = Math.max(0, Math.min(1, 1 - (o.x - UNICORN_X - 60) / 220));
-        drawMom(ctx, o.x, gy, t, excite);
-      }
+      else drawPorridge(ctx, o.x, gy, t);
     }
-    for (const c of this.cupcakes) drawCupcake(ctx, c.x, GROUND_Y + 2 - c.h + Math.sin(t * 3 + c.seed) * 2, t, c.seed);
+    for (const c of this.stars) drawStar(ctx, c.x, GROUND_Y + 2 - c.h + Math.sin(t * 2 + c.seed) * 2, t, c.seed);
 
-    const stretch = this.rider.grounded ? 0 : Math.max(-1, Math.min(1, this.rider.vy / 820));
+    const stretch = this.rider.grounded ? 0 : Math.max(-1, Math.min(1, this.rider.vy / 640));
     const squash = this.squash;
     const sy = 1 + stretch * 0.08 - squash * 0.14;
     const sx = 1 - stretch * 0.05 + squash * 0.12;
@@ -451,7 +528,7 @@ export class RideScene implements Scene {
     if (this.pickup) this.drawPickup(ctx, this.pickup, t);
     this.glitter.draw(ctx);
 
-    const fall = this.phase === 'fallen' ? Math.min(1, this.fallTime / 0.5) : 0;
+    const fall = this.phase === 'fallen' && !this.home ? Math.min(1, this.fallTime / 0.5) : 0;
     drawUnicorn(ctx, {
       x: UNICORN_X,
       y: GROUND_Y + 6 - this.rider.y,
@@ -462,39 +539,41 @@ export class RideScene implements Scene {
       t,
       cat: { dx: -fall * 70, dy: fall * fall * 95, rot: -fall * 1.4 },
       hoofScale: 1.3,
-      hoof: (c, path, box, i) => {
-        const polish = POLISHES.find((p) => p.id === this.hooves[i]);
-        if (polish) fillPolish(c, path, box, polish, t, i * 17 + 3, 3);
-      },
+      ...this.decor(t),
     });
 
     for (const h of this.hearts) drawHeartShot(ctx, h.x, h.y, t);
 
-    ctx.fillStyle = '#ff5fa2';
-    for (const f of this.floaters) {
-      ctx.globalAlpha = Math.min(1, f.life * 1.5);
-      ctx.fill(heart(f.x, f.y, 10));
-    }
-    ctx.globalAlpha = 1;
+    // The level so far, as stars: no numbers to read.
+    LEVELS.forEach((_, i) => {
+      ctx.fillStyle = i <= this.level ? '#ffd23f' : 'rgba(255,255,255,0.25)';
+      ctx.fill(softStar(WIDTH / 2 + (i - (LEVELS.length - 1) / 2) * 30, 28, 11, 5));
+    });
 
     // Calm moments are drawn over the paused ride.
     this.pause?.draw(ctx);
     this.orbs.draw(ctx);
   }
 
-  /** A polish bottle or the big sharing cupcake, glowing, with an arrow: collect it or jump over to skip. */
-  private drawPickup(ctx: CanvasRenderingContext2D, pickup: { x: number; kind: 'polish' | 'share' }, t: number): void {
+  /** A polish bottle, a hair clip or the big sharing cupcake, glowing, with an arrow: collect it or jump over to skip. */
+  private drawPickup(ctx: CanvasRenderingContext2D, pickup: { x: number; kind: PickupKind }, t: number): void {
     const x = pickup.x;
-    const bottom = GROUND_Y - 6 + Math.sin(t * 3) * 5;
+    const bottom = GROUND_Y - 6 + Math.sin(t * 2) * 5;
     const halo = ctx.createRadialGradient(x, bottom - 45, 4, x, bottom - 45, 70);
     halo.addColorStop(0, 'rgba(255,255,255,0.6)');
     halo.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = halo;
     ctx.fillRect(x - 70, bottom - 115, 140, 140);
     if (pickup.kind === 'polish') {
-      drawBottle(ctx, x, bottom, POLISHES[Math.floor(t / 1.5) % POLISHES.length], t, 5, 0.85);
+      drawBottle(ctx, x, bottom, POLISHES[Math.floor(t / 3) % POLISHES.length], t, 5, 0.85);
+    } else if (pickup.kind === 'gate') {
+      drawGate(ctx, x, bottom + 4, this.level + 2, t);
+    } else if (pickup.kind === 'home') {
+      drawHome(ctx, x, bottom + 4, 1.1);
+    } else if (pickup.kind === 'clip') {
+      drawClip(ctx, x, bottom - 42, 32, 'bow');
     } else {
-      // Twice the size of a normal cupcake: special, and meant for sharing.
+      // One big cupcake: the only treat on the ride, and meant for sharing.
       ctx.save();
       ctx.translate(x, bottom);
       ctx.scale(2, 2);
@@ -505,6 +584,7 @@ export class RideScene implements Scene {
     drawTwinkle(ctx, x - 24, bottom - 40, 6, flash(t, 3, 2));
 
     // A bouncing arrow: collect this, do not jump over it.
-    drawDownArrow(ctx, x, bottom - 108, 40, t);
+    const tall = pickup.kind === 'gate' || pickup.kind === 'home';
+    drawDownArrow(ctx, x, bottom - (tall ? 134 : 108), 40, t);
   }
 }

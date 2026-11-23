@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { POLISHES } from '../src/data/polishes';
-import { bareNails, COMPLETION_BONUS, cycle, isComplete, nextBare, paint, POINTS_PER_NAIL } from '../src/logic/nails';
+import { bareNails, COMPLETION_BONUS, cycle, isComplete, paint, POINTS_PER_NAIL } from '../src/logic/nails';
 import { scoreFor } from '../src/logic/score';
 
 describe('nail station', () => {
@@ -26,13 +26,6 @@ describe('nail station', () => {
   it('ignores nails that do not exist', () => {
     const nails = bareNails();
     expect(paint(nails, 9, 'pink')).toEqual({ nails, points: 0 });
-  });
-
-  it('finds the next bare nail for the keyboard', () => {
-    let nails = paint(bareNails(), 0, 'red').nails;
-    nails = paint(nails, 2, 'red').nails;
-    expect(nextBare(nails)).toBe(1);
-    expect(nextBare(['a', 'b', 'c', 'd'])).toBe(-1);
   });
 
   it('wraps the polish selection both ways', () => {

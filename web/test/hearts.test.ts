@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OBSTACLES } from '../src/data/obstacles';
-import { arcOver, CUPCAKE, ROW } from '../src/logic/cupcakes';
+import { arcOver, ROW, STAR } from '../src/logic/stars';
 import { CLOUD, heartGone, hitsCloud, launchHeart, stepHeart } from '../src/logic/hearts';
 import { restingRider, stepRider } from '../src/logic/physics';
 
@@ -66,7 +66,7 @@ describe('cupcakes', () => {
   });
 
   it('the top of each arc is reachable: a tap for diamonds, a held jump for rainbows', () => {
-    // The rider's 60 px tall box must reach a cupcake's bottom edge.
+    // The rider's 60 px tall box must reach a star's bottom edge.
     const reach = (jumpPeak: number) => jumpPeak + 60;
     for (const o of OBSTACLES) {
       const top = Math.max(...arcOver(o.kind).map((s) => s.h));
@@ -74,12 +74,12 @@ describe('cupcakes', () => {
     }
   });
 
-  it('arcs have at most three cupcakes', () => {
+  it('arcs have at most three stars', () => {
     for (const o of OBSTACLES) expect(arcOver(o.kind).length).toBeLessThanOrEqual(3);
   });
 
   it('ground rows are collected just by running', () => {
     for (const s of ROW) expect(s.h).toBeLessThan(60);
-    expect(CUPCAKE.h).toBeGreaterThan(0);
+    expect(STAR.h).toBeGreaterThan(0);
   });
 });

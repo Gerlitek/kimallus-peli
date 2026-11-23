@@ -117,7 +117,7 @@ export function drawHeartShot(ctx: CanvasRenderingContext2D, x: number, y: numbe
   glow.addColorStop(1, 'rgba(255,170,210,0)');
   ctx.fillStyle = glow;
   ctx.fillRect(x - 30, y - 30, 60, 60);
-  const beat = 1 + Math.sin(t * 20) * 0.08;
+  const beat = 1 + Math.sin(t * 6) * 0.08;
   ctx.fillStyle = C.heart;
   ctx.fill(heart(x, y, 16 * beat));
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
