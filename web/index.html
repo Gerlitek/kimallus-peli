@@ -89,6 +89,22 @@
       box-shadow: 0 6px 20px rgba(200, 40, 120, 0.45); touch-action: none;
     }
     @media (hover: none) and (pointer: coarse) { #shoot { display: block; } }
+    /* Phones and tablets: while playing, the game fills the window, letterboxed to 16:9. Best held sideways. */
+    body.playing { overflow: hidden; }
+    body.playing #game {
+      position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+      border: 0; border-radius: 0; background: var(--bg);
+    }
+    body.playing #game .frame { width: min(100vw, calc(100dvh * 16 / 9)); }
+    #game { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    /* Leaving the game on a touch screen: small and out of the way, shown only while playing there. */
+    #quit {
+      display: none; position: absolute; right: 3%; top: 14%;
+      width: clamp(34px, 6vw, 44px); aspect-ratio: 1; border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.7); background: rgba(90, 30, 110, 0.35); color: #fff;
+      font-size: clamp(14px, 2.6vw, 18px); line-height: 1; touch-action: none;
+    }
+    body.playing #quit { display: block; }
     #message { position: absolute; inset: 0; padding: 0 4% 0 36%; display: grid; place-items: center; text-align: center; pointer-events: none; }
     #message .card {
       color: #4a2259; font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
@@ -113,6 +129,20 @@
     /* A dedication on the left under the game, where the sister game has its credit line. No name, on purpose. */
     .credit { margin: 14px 0 0; font-size: 0.8rem; color: var(--text-dim); }
     .credit b { color: #d9c4a3; font-weight: 400; }
+
+    /* Leaderboard: quiet, below the game. The player's own row is lit. */
+    #scores { margin: 28px 0 0; }
+    #scores h2 { margin: 0 0 8px; font-size: 0.95rem; font-weight: 600; color: var(--text); }
+    #scores table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+    #scores th { text-align: left; font-weight: 400; font-size: 0.72rem; color: var(--text-dim); padding: 4px 8px; border-bottom: 1px solid var(--border); }
+    #scores td { padding: 5px 8px; border-bottom: 1px solid rgba(37, 45, 63, 0.6); color: var(--text-dim); }
+    #scores td:first-child, #scores th:first-child { width: 2.5em; }
+    #scores td:last-child, #scores th:last-child { text-align: right; }
+    #scores .level { color: #ffc94a; white-space: nowrap; }
+    #scores tr.own td { color: var(--text); background: rgba(232, 90, 165, 0.1); }
+    #scores tr.own td:nth-child(2) { color: var(--stats); font-weight: 600; }
+    #scores .note { margin: 8px 0 0; font-size: 0.75rem; color: var(--text-dim); }
+    [hidden] { display: none !important; }
 
     /* The publisher line is small and faint on purpose, far below the game. */
     footer {
@@ -159,10 +189,19 @@
         <canvas id="play" aria-label="Kimallus-peli"></canvas>
         <div id="hud"><span class="lumens" title="Kimallusta kerätty (valopallot eli lumenit)"><i class="lumen" aria-hidden="true"></i><span id="score">0</span></span><span id="best"></span></div>
         <button id="shoot" type="button" aria-label="Ammu sydän">♥</button>
+        <button id="quit" type="button" aria-label="Lopeta peli">✕</button>
         <div id="message"></div>
       </div>
     </div>
     <p class="credit"><b>Kaikille valon lapsille.</b></p>
+    <section id="scores" aria-label="Pistetaulukko">
+      <h2>Parhaat kimallukset</h2>
+      <table hidden>
+        <thead><tr><th>#</th><th>Pelinimi</th><th>Taso</th><th>Kimallusta</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note" hidden></p>
+    </section>
     <footer>
       <a class="stats" href="tilastot/">Tilastot</a>
       <span>Toteutus ja julkaisu</span>

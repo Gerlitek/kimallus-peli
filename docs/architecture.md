@@ -136,11 +136,21 @@ Pitkät söpöt nimet yhdistellään sanalistoista (sydän, tähti, yksisarvinen
 Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (kuvaileva sana, kahden teemasanan yhdyssana, hahmo). Nimessä on aina kolme sanaa, jotta sen voi lukea lapselle ja muistaa; ei numeroita. Yhdistelmiä on 228 000 (30 × 20 × 19 × 20), joten sama nimi osuu kahdelle harvoin, ja rivit erotetaan joka tapauksessa istuntotunnisteella. Uudet sanat lisätään listan loppuun, koska tallennetut nimet ovat indeksejä. Se arvotaan ensimmäisellä käynnillä, tallentuu selaimeen indekseinä ja näkyy pelin yläpuolella; "Arvo uusi" arpoo toisen. Listat ovat toistaiseksi tiedostossa `web/src/data/names.ts` ja säännöt tiedostossa `web/src/logic/names.ts`; ne siirtyvät `shared/`-pakettiin, kun API tulee.
 
 ### Tila selaimessa
-- `localStorage`: nimimerkki (indekseinä), omat parhaat, ääniasetus. Luku ja kirjoitus `try/catch`issa.
+- `localStorage`: nimimerkki (indekseinä) ja paras kierros (`{ score, level, home }`: kimallus, saavutettu taso, pääsikö kotiin). Luku ja kirjoitus `try/catch`issa.
 - `sessionStorage`: satunnainen istuntotunniste (`crypto.randomUUID()`).
 - Ei evästeitä, ei kolmannen osapuolen skriptejä, ei ulkoisia fontteja.
 
 Peli ei koskaan odota verkkoa. Jos API ei vastaa, peli jatkuu ja taulu näyttää paikalliset tulokset.
+
+### Pistetaulukko ja tilastosivu ennen APIa
+Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
+
+- **Pistetaulukko** (`leaderboard.ts`, pelin alla): kymmenen parasta riviä palvelimelta (`GET /api/leaderboard`) ja oma paras korostettuna oikealla sijallaan. Rivi on `{ name: [indeksit], score, level, home }`; taso näkyy tähtinä ja kotiin pääsy talona. Ilman APIa näkyy vain tämän laitteen paras tulos. Palvelimelta tulleet rivit validoidaan (nimi-indeksit, numerot) ennen näyttämistä.
+- **Tilastosivu** (`stats.ts`, `tilastot/`): piirtää yöajon yhteenvedon (`stats.json` sivuston juuressa, tyyppi `Summary`): pelikerrat, pelaajat, kotiin päässeet, kesto ja kimallus (mediaanit), pelit päivittäin, korkein taso, rauhoittumispisteiden käynnit ja ohitukset, suosituimmat lakat ja klipsit sekä esteet, joihin kompastuttiin. Palkit ovat pelkkää HTML:ää ja CSS:ää, ei kaaviokirjastoa.
+- **Esimerkkidata:** osoitteen perään `?demo` näyttää keksityt rivit ja luvut (`stats-demo.ts`), ja sivulla lukee selvästi, että ne ovat esimerkkejä.
+
+### Puhelin ja tabletti
+Peli toimii kosketuksella: napautus hyppää, pitkä painallus loikkaa korkealle, sydännappi ampuu. Kosketuslaitteella peli täyttää pelatessa koko ikkunan (`body.playing`), koska kaikissa laitteissa ei ole koko näytön tilaa, ja pieni ✕-nappi korvaa Esc:n. Kuvasuhde on 16:9, joten laite kannattaa pitää vaakatasossa. Tunnistus: `(hover: none) and (pointer: coarse)`.
 
 ## 3. API
 
@@ -229,7 +239,16 @@ npm workspaces, yksi `package.json` juuressa.
 3. **Sisältö:** loput esteet, kuppikakut, sydänpilvet, yksi Station, tarinalauseet.
 4. **API:** pisteet ja pistetaulukko, kulusuojat.
 5. **Data:** tapahtumat, yöajo, tilastosivu.
-6. **Viimeistely:** loput Stationit, tunnehetket, äänet, README ja `docs/aws-vs-azure.md`.
+6. **Viimeistely:** README ja `docs/aws-vs-azure.md`.
+
+### Versio 1 ja jatkokehitys
+Versio 1 on sisällöltään valmis: kolme tasoa ja maali, neljä estettä, tähdet ja sydänpilvet, kaksi rauhoittumispistettä (kynnet ja harja), kuppikakun jakaminen, pelinimi, oma paras tulos sekä pistetaulukon ja tilastosivun rungot. Jäljellä on AWS-työ (vaiheet 2, 4 ja 5).
+
+Jatkokehitysideat versioon 2:
+- **Figuurileikki:** rauhoittumispiste, jossa leikitään yksisarvisen kanssa figuureilla.
+- **Herkkupiste:** yksisarvisen syöttäminen. Harkitaan, koska herkkujen osuutta pelissä vähennettiin tarkoituksella.
+- **Äänet:** pehmeät äänet ja mykistysnappi. Päätetään myöhemmin.
+- **Tarina:** kerrotaan kuvina, koska pelaaja ei osaa lukea.
 
 Jokaisen vaiheen jälkeen tarkistetaan `AWS.md`:n kohdat ja Cost Explorer.
 

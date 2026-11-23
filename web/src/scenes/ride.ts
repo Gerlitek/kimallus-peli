@@ -133,7 +133,7 @@ export class RideScene implements Scene {
   private squash = 0;
   private fallTime = 0;
   private readyTime = 0;
-  private best = loadBest();
+  private best = loadBest().score;
   /** The best score already written to the browser's storage; `best` follows it when a run ends. */
   private saved = this.best;
   private readonly glitter = new Particles();
@@ -219,7 +219,7 @@ export class RideScene implements Scene {
   private keepBest(): void {
     if (this.score <= this.saved) return;
     this.saved = this.score;
-    saveBest(this.saved);
+    saveBest({ score: this.saved, level: this.level + 1, home: false });
   }
 
   private get score(): number {
@@ -508,6 +508,8 @@ export class RideScene implements Scene {
     this.fallTime = 0;
     this.hearts = [];
     const score = this.score;
+    // Reaching home is part of the best run, so it is written again with that mark.
+    if (home && score >= this.saved) saveBest({ score, level: this.level + 1, home });
     const record = score > this.best;
     if (record) {
       this.best = score;

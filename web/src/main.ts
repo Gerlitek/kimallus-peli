@@ -2,6 +2,7 @@ import './fonts';
 import { drawUnicorn } from './art/unicorn';
 import { RideScene } from './scenes/ride';
 import { HEIGHT, WIDTH, type Scene } from './scenes/scene';
+import { showLeaderboard } from './leaderboard';
 import { formatName, rollName } from './logic/names';
 import { Input } from './systems/input';
 import { loadName, saveName } from './systems/storage';
@@ -42,10 +43,12 @@ drawLogo();
 // The player's name: drawn from word lists on the first visit and kept in this browser.
 // The button draws a new one. Only the word indexes are stored, never free text.
 const nameEl = document.querySelector<HTMLElement>('#player-name')!;
+const scoresEl = document.querySelector<HTMLElement>('#scores')!;
 const rerollEl = document.querySelector<HTMLButtonElement>('#reroll')!;
 function showName(name = rollName(Math.random)): void {
   saveName(name);
   nameEl.textContent = formatName(name);
+  void showLeaderboard(scoresEl);
 }
 showName(loadName() ?? undefined);
 rerollEl.addEventListener('click', () => {
@@ -70,7 +73,13 @@ function resize(): void {
 new ResizeObserver(resize).observe(canvas);
 resize();
 
+// Touch screens have no Esc: a small button leaves the game.
+const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 const input = new Input(canvas, WIDTH, HEIGHT, document.querySelector<HTMLElement>('#shoot'));
+document.querySelector<HTMLElement>('#quit')!.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  input.quit();
+});
 const lumensEl = document.querySelector<HTMLElement>('.lumens')!;
 const scene: Scene = new RideScene({
   score: (v) => (scoreEl.textContent = `${v}`),
@@ -87,11 +96,15 @@ const scene: Scene = new RideScene({
   },
   started: () => {
     playing = true;
+    // Phones and tablets: the game fills the window (see body.playing), since not all of them have full screen.
+    document.body.classList.toggle('playing', TOUCH);
     enterFullscreen();
   },
   ended: () => {
     playing = false;
+    document.body.classList.remove('playing');
     exitFullscreen();
+    void showLeaderboard(scoresEl);
   },
 });
 scene.enter();

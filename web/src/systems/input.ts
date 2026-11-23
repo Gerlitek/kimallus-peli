@@ -70,6 +70,11 @@ export class Input {
     return p;
   }
 
+  /** Leave the game: the same as Esc, for the button on touch screens. */
+  quit(): void {
+    this.quitFlag = true;
+  }
+
   /** True once when Esc was pressed: leave the game. (In full screen the browser uses the first Esc itself.) */
   takeQuit(): boolean {
     const q = this.quitFlag;

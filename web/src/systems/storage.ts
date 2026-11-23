@@ -3,18 +3,31 @@ import { isValidName, type NameIndexes } from '../logic/names';
 /** localStorage can be missing or blocked; the game works without it. */
 const BEST_KEY = 'kimallus.best';
 
-export function loadBest(): number {
-  try {
-    const v = Number(localStorage.getItem(BEST_KEY));
-    return Number.isFinite(v) ? v : 0;
-  } catch {
-    return 0;
-  }
+/** The best run in this browser: the score, the level reached and whether the ride got home. */
+export interface BestRun {
+  score: number;
+  level: number;
+  home: boolean;
 }
 
-export function saveBest(score: number): void {
+export function loadBest(): BestRun {
   try {
-    localStorage.setItem(BEST_KEY, String(score));
+    const v: unknown = JSON.parse(localStorage.getItem(BEST_KEY) ?? '0');
+    // Earlier versions stored the score alone, as a number.
+    if (typeof v === 'number' && Number.isFinite(v)) return { score: v, level: 1, home: false };
+    const run = v as Partial<BestRun> | null;
+    if (run && Number.isFinite(run.score) && Number.isFinite(run.level)) {
+      return { score: Number(run.score), level: Number(run.level), home: run.home === true };
+    }
+  } catch {
+    // Unreadable: start from nothing.
+  }
+  return { score: 0, level: 1, home: false };
+}
+
+export function saveBest(run: BestRun): void {
+  try {
+    localStorage.setItem(BEST_KEY, JSON.stringify(run));
   } catch {
     // Not saved; nothing else to do.
   }
