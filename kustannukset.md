@@ -13,11 +13,11 @@
 | Pisteet | DynamoDB, provisioitu Standard (25 WCU / 25 RCU) | Aina ilmainen raja |
 | Tapahtumat | S3, poisto 30 vrk | Senttejä |
 | Ajastus | EventBridge Scheduler | Ilmainen pienellä käytöllä |
-| Koodina | AWS CDK (TypeScript) | Ilmainen |
+| Koodina | Terraform (tilin pohja) ja AWS CDK (sovellus) | Ilmainen. Terraformin state-ämpäri senttejä. |
 | Julkaisu | GitHub Actions + OIDC | Ilmainen, ei avaimia |
 
 ## Teknologiavalinnat
-- **Infra:** CDK TypeScriptillä (zombipelissä Bicep). Erottuu pilvellä, ei kielellä.
+- **Infra:** tilin pohja (budjetti, OIDC) Terraformilla, sovellus CDK:lla TypeScriptillä (zombipelissä Bicep). Perustelut: `docs/architecture.md` kohta 5.
 - **API:** Lambda TypeScriptillä, paketointi esbuildilla. Kylmäkäynnistys nopea.
 - **Frontti:** vektorigrafiikka (SVG tai canvas), ei pikseligrafiikkaa. Phaser/Pixi vain jos tarvitaan pelisilmukka.
 - **Tyyli:** omat hahmot, pehmeitä ja vapaamuotoisia (Bézier-polut, blob-muodot), ei tiukkaa geometriaa. Pyöristetyt kulmat, pomppiva liike, kimallus.

@@ -21,3 +21,11 @@ cdk.out/
 
 # SSH deploy key for the web host. Lives in GitHub secrets, never in the repo.
 kimallus_deploy*
+
+# Terraform: state and local settings hold account details.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+backend.hcl
+crash.log

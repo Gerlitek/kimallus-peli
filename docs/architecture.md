@@ -22,7 +22,7 @@ EventBridge Scheduler, kerran vuorokaudessa                               │
   └─► Lambda curate:  raw/ ──► public/stats.json ─────────────────────────┘
 
 GitHub Actions ──(OIDC, ei avaimia)──► AWS     CDK-pinot ja koodi
-Omistaja ──(käsin, kerran)───────────► tili    bootstrap, budjetti, OIDC-rooli
+Omistaja ──(Terraform, käsin)────────► tili    budjetti, OIDC-rooli, state-ämpäri
 ```
 
 Kaikki kulkee yhden CloudFront-jakelun kautta. Silloin front ja API ovat samassa osoitteessa, CORSia ei tarvita, eikä Lambdaa tai S3:a voi kutsua suoraan ohi CloudFrontin.
@@ -183,13 +183,44 @@ Yöajo (EventBridge Scheduler → Lambda) lukee edellisen päivän raw-tiedostot
 
 Tapahtumat eivät sisällä henkilötietoja: istuntotunniste, tapahtuman tyyppi, aika ja pelin arvot. IP-osoitteita ei tallenneta.
 
-## 5. Infra koodina (CDK, TypeScript)
+## 5. Infra koodina (Terraform ja CDK)
+
+Kaksi työkalua, kummallakin oma tehtävä. Sama resurssi ei koskaan ole molemmissa.
+
+| Kerros | Työkalu | Sisältö | Kuka ajaa |
+|---|---|---|---|
+| Tilin pohja | Terraform | budjetti ja hälytykset, GitHub OIDC -provider, deploy-rooli, state-ämpäri | omistaja käsin |
+| Sovellus | CDK (TypeScript) | S3, CloudFront, Lambda, DynamoDB, yöajo | GitHub Actions hyväksynnän jälkeen |
+
+Perustelut:
+- **Kanamuna-ongelma.** CDK:n deploy CI:stä tarvitsee OIDC-roolin, joten rooli ei voi olla CDK:ssa. Pohja on oltava olemassa ennen sovellusta.
+- **Eri elinkaari.** Pohja muuttuu harvoin ja elää sovelluksesta riippumatta. Sovellus muuttuu usein ja sen Lambda-koodi on samassa TS-projektissa.
+- **Oikeuksien erotus.** CI:n rooli ei voi muuttaa omia oikeuksiaan, koska rooli on Terraformissa, jota CI ei aja.
+- **Työnäyte.** Molemmat yleisiä työelämässä; jako pohja Terraformilla, sovellus CDK:lla on tavallinen malli.
+
+### Terraform: `infra-bootstrap/`
+
+```
+infra-bootstrap/
+  versions.tf      Terraform- ja provider-versiot, S3-backend
+  state.tf         state-ämpäri: versiointi, salaus, Block Public Access
+  budget.tf        budjetti 6 $/kk, hälytykset 2, 4 ja 6 $ (toteuma ja ennuste)
+  github-oidc.tf   OIDC-provider ja deploy-rooli
+  variables.tf     region, repo, hälytysten sähköposti
+  outputs.tf       deploy-roolin ARN (GitHubin muuttujaksi)
+```
+
+- State S3:ssa, lukitus S3:n omalla lukkotiedostolla (`use_lockfile`), ei DynamoDB-taulua. Ensimmäinen ajo paikallisella statella, sitten `terraform init -migrate-state` ämpäriin.
+- Backendin ämpärin nimi `backend.hcl`:ssä ja muuttujat `terraform.tfvars`:ssa, kumpikaan ei repossa. `.terraform.lock.hcl` on repossa.
+- Deploy-rooli luottaa vain tämän repon `production`-ympäristöön. Sen ainoa oikeus on ottaa käyttöön CDK:n bootstrap-roolit (`cdk-*`), ei suoria oikeuksia resursseihin.
+- `cdk bootstrap` (CDKToolkit-pino) pysyy CDK:n omana, koska CDK olettaa sen rakenteen.
+
+### CDK: `infra/`
 
 ```
 infra/
   bin/app.ts
   lib/
-    bootstrap-stack.ts    GitHub OIDC -rooli, budjetti, hälytykset   (deploy käsin kerran)
     cert-stack.ts         ACM-varmenne us-east-1:ssä                (vain jos oma domain)
     web-stack.ts          S3, CloudFront, OAC
     api-stack.ts          Lambda, Function URL, DynamoDB, raw-ämpäri
@@ -212,6 +243,7 @@ infra/
 | `web.yml` | tyyppitarkistus, Vitest, build; käsin käynnistettynä hyväksyntä ja rsync gerlitekiin (väliratkaisu) |
 | `api.yml` | lint, test |
 | `infra.yml` | `cdk synth`, testit, PR:ssä `cdk diff`, mainissa deploy hyväksynnän takana (GitHub Environment) |
+| `bootstrap.yml` | `terraform fmt -check` ja `terraform validate`, ei AWS-tunnuksia; `apply` vain omistajan koneelta |
 
 Kirjautuminen AWS:ään OIDC:llä. Rooli luottaa vain tämän repon `main`-haaraan ja `production`-ympäristöön.
 
@@ -219,7 +251,7 @@ Käytännöt zombipelin mallin mukaan:
 - Push ja pull request vain testaavat ja buildaavat. Deploy käynnistetään käsin (`workflow_dispatch`) `main`ista ja hyväksytään GitHubin ympäristössä `production`.
 - Actionit lukitaan commit-SHA:han, ei tagiin.
 - Käynnissä olevaa deployta ei peruta (`concurrency`).
-- Tilitason asiat (bootstrap, budjetti, OIDC-rooli) omistaja deployaa käsin.
+- Tilitason asiat (budjetti, OIDC-rooli, state-ämpäri) omistaja ajaa Terraformilla käsin `terraform plan`in tarkistuksen jälkeen.
 
 ### Väliratkaisu: julkaisu gerlitekiin
 - Front kopioidaan jaetulle webhotellille (Apache) rsyncillä SSH:n yli. `--delete` poistaa vanhojen buildien tiedostot.
@@ -235,7 +267,8 @@ Käytännöt zombipelin mallin mukaan:
 web/        peli ja tilastosivu
 api/        Lambda-käsittelijät ja logiikka
 shared/     tyypit, sanalistat, validointi (frontti ja API)
-infra/      CDK
+infra/      CDK (sovellus)
+infra-bootstrap/  Terraform (tilin pohja)
 docs/       dokumentit
 private/    ei repossa (.gitignore)
 ```
@@ -245,7 +278,7 @@ npm workspaces, yksi `package.json` juuressa.
 ## 8. Vaiheet
 
 1. **Paikallinen peli:** Ride-kohtaus, yksisarvinen, kissa, kaksi estettä. Ei AWS:ää.
-2. **Verkkoon:** ensin gerlitekin webhotelliin rsyncillä (väliratkaisu), sitten bootstrap-pino, web-pino ja CI. Peli julkisesti CloudFrontissa.
+2. **Verkkoon:** ensin gerlitekin webhotelliin rsyncillä (väliratkaisu), sitten Terraform-pohja (budjetti, OIDC), web-pino ja CI. Peli julkisesti CloudFrontissa.
 3. **Sisältö:** loput esteet, kuppikakut, sydänpilvet, yksi Station, tarinalauseet.
 4. **API:** pisteet ja pistetaulukko, kulusuojat.
 5. **Data:** tapahtumat, yöajo, tilastosivu.
@@ -271,7 +304,8 @@ Jokaisen vaiheen jälkeen tarkistetaan `AWS.md`:n kohdat ja Cost Explorer.
 | Vektorigrafiikka, ei pikseleitä | oma ilme, ei sekoitu aiempaan peliin |
 | Sydämet osuvat harmaisiin pilviin | ampumiselle tavoite, tunnetaito: suru → ilo |
 | Canvas 2D ilman pelimoottoria | pieni peli, kevyt ja selitettävä |
-| CDK TypeScript, Lambda Node.js | yksi kieli, tunnetuin CDK-kieli |
+| CDK TypeScript, Lambda Node.js | sovellus ja infra samalla kielellä, tunnetuin CDK-kieli |
+| Tilin pohja Terraformilla, sovellus CDK:lla | kanamuna-ongelma (CI:n rooli ennen CDK:ta), eri elinkaari, CI ei voi muuttaa omia oikeuksiaan; näyte kummastakin työkalusta |
 | Front ensin gerlitekiin rsyncillä, sitten S3 + CloudFront | peli verkkoon heti ilman kuluja, sama todettu malli kuin zombipelissä; AWS-työ ei viivästytä julkaisua |
 
 ## 10. Avoimet kysymykset

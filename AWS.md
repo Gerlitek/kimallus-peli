@@ -16,9 +16,12 @@ Rastita kohdat työn edetessä. Kustannukset: `kustannukset.md`.
 - [ ] CloudFront-varmenne (ACM) `us-east-1`:ssä, jos oma domain
 - [ ] Domain: CloudFrontin oma osoite vai oma (Route 53 maksaa 0,50 $/kk)
 
-## 2. CDK ja julkaisu
+## 2. Terraform, CDK ja julkaisu
+- [ ] Terraform-pohja (`infra-bootstrap/`): state-ämpäri, budjetti, OIDC; `terraform plan` tarkistettu ennen `apply`ta
+- [ ] State siirretty S3:een (`-migrate-state`), ei `*.tfstate`-tiedostoja repossa
 - [ ] `cdk bootstrap` tehty (tarkista, ettei tuota kuluja)
 - [ ] GitHub Actions OIDC, IAM-rooli rajattu omaan repoon ja haaraan
+- [ ] Deploy-rooli voi vain ottaa käyttöön CDK:n `cdk-*`-roolit
 - [ ] Julkaisuroolilla ei pysyvää `AdministratorAccess`ia
 - [ ] `cdk diff` ennen jokaista deployta
 - [ ] Kokeilupinot poistetaan (`cdk destroy`)
@@ -56,7 +59,7 @@ Rastita kohdat työn edetessä. Kustannukset: `kustannukset.md`.
 
 ## Vaiheet
 1. **Tili ja suojat:** kohta 0.
-2. **Runko:** CDK-pinon alku (S3, CloudFront), bootstrap, OIDC-julkaisu.
+2. **Runko:** Terraform-pohja (budjetti, OIDC), `cdk bootstrap`, CDK-pinon alku (S3, CloudFront), OIDC-julkaisu.
 3. **Staattinen peli verkossa:** kohdat 3 ja 5 tarkistetaan.
 4. **API (jos tarvitaan):** Lambda, DynamoDB, throttling, validointi.
 5. **Yöajo ja data (vapaaehtoinen):** EventBridge, S3 raw → curated.
@@ -68,3 +71,4 @@ Rastita kohdat työn edetessä. Kustannukset: `kustannukset.md`.
 | | CDK TypeScriptillä, Lambda TS | Yksi kieli, nopea käynnistys, tunnetuin CDK-kieli |
 | | Vektorigrafiikka, omat hahmot | Ei sekoitu zombipelin pikselityyliin |
 | 2026-11-23 | Front ensin gerlitekin webhotelliin (rsync), AWS myöhemmin | Peli verkkoon heti ilman kuluja, sama malli kuin zombipelissä |
+| 2026-11-24 | Tilin pohja Terraformilla, sovellus CDK:lla | CI:n rooli tarvitaan ennen CDK:ta, eri elinkaari, CI ei voi muuttaa omia oikeuksiaan |
