@@ -30,5 +30,7 @@ Ohjaus: välilyönti, nuoli ylös, hiiri tai napautus. Pidä pohjassa, niin hypp
 | Kansio | Sisältö |
 |---|---|
 | `web/` | Peli: Vite, TypeScript, Canvas 2D |
+| `api/` | Pisteiden API: yksi Lambda-käsittelijä, DynamoDB |
+| `shared/` | Frontin ja API:n yhteinen koodi: sanalistat, validointi |
 | `docs/` | Dokumentit |
 | `.github/workflows/` | CI: testit ja build jokaisesta pushista |

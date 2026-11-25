@@ -1,19 +1,8 @@
-import { formatName, isValidName, rollName, type NameIndexes } from './logic/names';
+import { TOP, type ScoreRow } from '@kimallus/shared';
+import { formatName, isValidName, rollName } from './logic/names';
 import { seeded } from './logic/random';
 import { DEMO, getJson } from './systems/api';
 import { loadBest, loadName } from './systems/storage';
-
-/** One row of the leaderboard, as GET /api/leaderboard returns it. The name is word indexes, never free text. */
-export interface ScoreRow {
-  name: NameIndexes;
-  score: number;
-  /** Highest level reached, 1..3. */
-  level: number;
-  /** The ride got all the way home. */
-  home: boolean;
-}
-
-const TOP = 10;
 
 function demoRows(): ScoreRow[] {
   const rng = seeded(11);

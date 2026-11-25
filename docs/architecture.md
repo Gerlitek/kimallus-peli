@@ -135,7 +135,7 @@ Miljöö: pinkki, kimalteleva tähtimaailma ja asteroidit. Termi *stellar* (lois
 ### Nimimerkit
 Pitkät söpöt nimet yhdistellään sanalistoista (sydän, tähti, yksisarvinen, sateenkaari …). Nimi tallennetaan **sanalistojen indekseinä**, ei vapaana tekstinä. Palvelin hyväksyy vain kelvolliset indeksit, joten julkiseen tauluun ei voi kirjoittaa mitä tahansa. Sanalistat ovat jaetussa `shared/`-paketissa.
 
-Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (kuvaileva sana, kahden teemasanan yhdyssana, hahmo). Nimessä on aina kolme sanaa, jotta sen voi lukea lapselle ja muistaa; ei numeroita. Yhdistelmiä on 228 000 (30 × 20 × 19 × 20), joten sama nimi osuu kahdelle harvoin, ja rivit erotetaan joka tapauksessa istuntotunnisteella. Uudet sanat lisätään listan loppuun, koska tallennetut nimet ovat indeksejä. Se arvotaan ensimmäisellä käynnillä, tallentuu selaimeen indekseinä ja näkyy pelin yläpuolella; "Arvo uusi" arpoo toisen. Listat ovat toistaiseksi tiedostossa `web/src/data/names.ts` ja säännöt tiedostossa `web/src/logic/names.ts`; ne siirtyvät `shared/`-pakettiin, kun API tulee.
+Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (kuvaileva sana, kahden teemasanan yhdyssana, hahmo). Nimessä on aina kolme sanaa, jotta sen voi lukea lapselle ja muistaa; ei numeroita. Yhdistelmiä on 228 000 (30 × 20 × 19 × 20), joten sama nimi osuu kahdelle harvoin, ja rivit erotetaan joka tapauksessa istuntotunnisteella. Uudet sanat lisätään listan loppuun, koska tallennetut nimet ovat indeksejä. Se arvotaan ensimmäisellä käynnillä, tallentuu selaimeen indekseinä ja näkyy pelin yläpuolella; "Arvo uusi" arpoo toisen. Listat ja kelpoisuussääntö ovat `shared/`-paketissa (`words.ts`, `names.ts`), jota sekä frontti että API käyttävät; arvonta on tiedostossa `web/src/logic/names.ts`.
 
 ### Tila selaimessa
 - `localStorage`: nimimerkki (indekseinä) ja paras kierros (`{ score, level, home }`: kimallus, saavutettu taso, pääsikö kotiin). Luku ja kirjoitus `try/catch`issa.
@@ -160,8 +160,8 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 
 | Reitti | Tehtävä | Rajat |
 |---|---|---|
-| `POST /api/scores` | tuloksen tallennus | yksi tulos per istunto, pistemäärän järkevyystarkistus |
-| `GET /api/leaderboard` | 20 parasta | CloudFront-välimuisti 60 s |
+| `POST /api/scores` | tuloksen tallennus | yksi tulos per istunto (409), validointi `shared/score.ts` (400), runko enintään 1 kt |
+| `GET /api/leaderboard` | 10 parasta | CloudFront-välimuisti 60 s |
 | `POST /api/events` | tapahtumaerä raw-kerrokseen | enintään 50 tapahtumaa ja 16 kt |
 
 **Lambda Function URL CloudFrontin takana (OAC)**, ei API Gatewayta: Function URL on ilmainen, eikä HTTP API:n ilmaisosuus jatku 12 kk:n jälkeen.
@@ -175,9 +175,15 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 
 | Säilö | Sisältö | Elinkaari |
 |---|---|---|
-| DynamoDB, yksi taulu, provisioitu Standard (5 RCU / 5 WCU) | pisteet, vuorokausilaskurit | pisteet pysyvät, laskurit TTL:llä |
+| DynamoDB, yksi taulu ja yksi indeksi, provisioitu Standard (kumpikin 5 RCU / 5 WCU) | pisteet, vuorokausilaskurit | pisteet pysyvät, laskurit TTL:llä |
 | S3 `raw/` | tapahtumat NDJSON:na, `raw/yyyy/mm/dd/` | poisto 30 vrk |
 | S3 `public/stats.json` | yöajon yhteenveto tilastosivulle | korvataan joka yö |
+
+### Taulun rakenne
+- Taulun avain `pk`. Tulos on `SESSION#<istuntotunniste>`, joten yhdellä istunnolla voi olla vain yksi tulos: kirjoitus on ehdollinen (`attribute_not_exists(pk)`).
+- Indeksi `leaderboard` (GSI): osioavain `board` (sama arvo kaikilla tuloksilla), lajitteluavain `score`. Kymmenen parasta luetaan yhdellä Querylla laskevassa järjestyksessä, ei Scania.
+- Indeksi on harva: laskuririveillä ei ole `board`-kenttää, joten ne eivät ole indeksissä.
+- Koodi: `api/src/logic/items.ts` (rivin muoto), `api/src/store.ts` (DynamoDB-kutsut), `api/src/handler.ts` (reititys).
 
 Yöajo (EventBridge Scheduler → Lambda) lukee edellisen päivän raw-tiedostot ja päivittää `stats.json`:n. Tilastosivu lukee sen suoraan CloudFrontista ilman Lambdaa.
 
