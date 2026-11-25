@@ -28,6 +28,8 @@ async function conditional(write: Promise<unknown>): Promise<boolean> {
 export function dynamoStore(table: string, endpoint?: string): Store {
   const local: DynamoDBClientConfig = { endpoint, region: 'local', credentials: { accessKeyId: 'local', secretAccessKey: 'local' } };
   const db = DynamoDBDocumentClient.from(new DynamoDBClient(endpoint ? local : {}));
+  /** Counters this instance has seen full. A full day is answered from memory, without spending a write on it. */
+  const full = new Set<string>();
 
   return {
     save(entry) {
@@ -65,11 +67,12 @@ export function dynamoStore(table: string, endpoint?: string): Store {
       return (res.Items ?? []).map(scoreRow);
     },
 
-    allow(route, max) {
+    async allow(route, max) {
       const { pk, expires } = counterKey(route, new Date());
       // ADD is an atomic counter: the database adds 1 itself, so parallel requests never lose a count.
       // The condition stops the counter at `max`, and the refused request gets 429.
-      return conditional(
+      if (full.has(pk)) return false;
+      const counted = await conditional(
         db.send(
           new UpdateCommand({
             TableName: table,
@@ -80,6 +83,9 @@ export function dynamoStore(table: string, endpoint?: string): Store {
           }),
         ),
       );
+      // The key holds the day, so yesterday's entry never matches again; an instance does not live long enough to collect many.
+      if (!counted) full.add(pk);
+      return counted;
     },
   };
 }

@@ -7,5 +7,5 @@ export default defineConfig({
   build: { rolldownOptions: { input: { main: 'index.html', stats: 'tilastot/index.html' } } },
   // In AWS, CloudFront serves the API under the game's own address (/api/*). The dev server does the same
   // with the local API (`npm run dev:api`), so the browser never makes a cross-origin request.
-  server: { proxy: { '/api': 'http://localhost:3001' } },
+  server: { proxy: { '/api': 'http://127.0.0.1:3001' } },
 });

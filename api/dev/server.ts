@@ -11,7 +11,7 @@ import { LEADERBOARD_INDEX } from '../src/logic/items';
 import { dynamoStore } from '../src/store';
 
 const PORT = 3001;
-const ENDPOINT = 'http://localhost:8000';
+const ENDPOINT = 'http://127.0.0.1:8000';
 const TABLE = 'kimallus-local';
 
 async function createTable(): Promise<void> {
@@ -75,4 +75,5 @@ createServer((req, res) => {
     console.log(`${req.method} ${req.url} ${statusCode}`);
     res.writeHead(statusCode, headers as Record<string, string>).end(body);
   });
-}).listen(PORT, () => console.log(`API on http://localhost:${PORT}, database ${ENDPOINT}`));
+  // Bound to this machine only: the dev API is never open to the local network.
+}).listen(PORT, '127.0.0.1', () => console.log(`API on http://127.0.0.1:${PORT}, database ${ENDPOINT}`));
