@@ -170,6 +170,7 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 - Lambdan reserved concurrency 5.
 - Vuorokausikatot DynamoDB-laskurilla (UTC-päivä): tulokset 2000, pistetaulukon luvut 5000, ylitys palauttaa 429. Laskuri on atominen (`ADD`), katto on ehto (`n < max`), ja rivi poistuu TTL:llä (`expires`) päivä päivän jälkeen. Rikkinäinen pyyntö hylätään ennen laskuria, joten se ei maksa kirjoitusta.
 - Syötteen validointi: koko, kentät, indeksit, pistemäärän yläraja.
+- Uskottavuus (`shared/score.ts`): pisteet enintään 5000, kotiin pääsy vain viimeiseltä tasolta, ja tasolla on vähimmäispisteet, jotka radan pituus antaa (taso 2: 70, taso 3: 110, koti: 200). Testi `web/test/score-rules.test.ts` sitoo luvut tasoihin. Säännöt pysäyttävät huolimattoman väärennöksen, eivät huolellista: peli pyörii selaimessa. Omituisen rivin omistaja poistaa taulusta käsin.
 
 ## 4. Data
 
