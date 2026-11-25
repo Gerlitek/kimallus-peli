@@ -52,3 +52,23 @@ export function saveName(name: NameIndexes): void {
     // Not saved; a new name is drawn next time.
   }
 }
+
+const SESSION_KEY = 'kimallus.session';
+
+/**
+ * A random id for this browser tab, kept until the tab is closed. The server keeps one score per id: the best run.
+ * Not personal data: it is not tied to the player, the device or the address.
+ */
+export function sessionId(): string {
+  try {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    sessionStorage.setItem(SESSION_KEY, id);
+    return id;
+  } catch {
+    // No storage: a new id per page load is fine.
+    return (fallbackId ??= crypto.randomUUID());
+  }
+}
+let fallbackId: string | undefined;

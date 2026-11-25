@@ -1,8 +1,15 @@
 import { TOP, type ScoreRow } from '@kimallus/shared';
 import { formatName, isValidName, rollName } from './logic/names';
 import { seeded } from './logic/random';
-import { DEMO, getJson } from './systems/api';
-import { loadBest, loadName } from './systems/storage';
+import { DEMO, getJson, postJson } from './systems/api';
+import { loadBest, loadName, sessionId, type BestRun } from './systems/storage';
+
+/** Sends a finished run to the shared leaderboard. The server keeps this session's best. Nothing waits for it. */
+export function submitScore(run: BestRun): void {
+  const name = loadName();
+  if (!name || run.score <= 0 || DEMO) return;
+  void postJson('/api/scores', { session: sessionId(), name, ...run });
+}
 
 function demoRows(): ScoreRow[] {
   const rng = seeded(11);

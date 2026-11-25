@@ -17,6 +17,14 @@ npm test        # Vitest
 npm run build
 ```
 
+Pistetaulukko paikallisesti (Docker), kolmessa päätteessä:
+
+```bash
+npm run db          # DynamoDB Local, tyhjä joka käynnistyksellä
+npm run dev:api     # API osoitteessa http://localhost:3001, luo taulun
+npm run dev:online  # peli, /api ohjataan paikalliseen API:in
+```
+
 Ohjaus: välilyönti, nuoli ylös, hiiri tai napautus. Pidä pohjassa, niin hyppy on korkeampi.
 
 ## Dokumentit

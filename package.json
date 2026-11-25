@@ -8,6 +8,9 @@
   ],
   "scripts": {
     "dev": "npm run dev -w web",
+    "db": "docker run --rm -p 8000:8000 --name kimallus-db amazon/dynamodb-local@sha256:6ada631ec7aa5fc83446855eb17233e3dad184fec47477e8140c6c569cfe0c86 -jar DynamoDBLocal.jar -sharedDb -inMemory",
+    "dev:api": "npm run dev -w @kimallus/api",
+    "dev:online": "VITE_API_URL=http://localhost:5173 npm run dev -w web",
     "build": "npm run build -w web",
     "test": "npm test --workspaces --if-present"
   }

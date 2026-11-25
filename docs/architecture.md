@@ -145,7 +145,7 @@ Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (
 Peli ei koskaan odota verkkoa. Jos API ei vastaa, peli jatkuu ja taulu näyttää paikalliset tulokset.
 
 ### Pistetaulukko ja tilastosivu ennen APIa
-Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
+Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. Kierroksen päätyttyä peli lähettää tuloksen (`submitScore`, `leaderboard.ts`) istuntotunnisteen kanssa; mitään ei odoteta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
 
 - **Pistetaulukko** (`leaderboard.ts`, pelin alla): kymmenen parasta riviä palvelimelta (`GET /api/leaderboard`) ja oma paras korostettuna oikealla sijallaan. Rivi on `{ name: [indeksit], score, level, home }`; taso näkyy tähtinä ja kotiin pääsy talona. Ilman APIa näkyy vain tämän laitteen paras tulos. Palvelimelta tulleet rivit validoidaan (nimi-indeksit, numerot) ennen näyttämistä.
 - **Tilastosivu** (`stats.ts`, `tilastot/`): piirtää yöajon yhteenvedon (`stats.json` sivuston juuressa, tyyppi `Summary`): pelikerrat, pelaajat, kotiin päässeet, kesto ja kimallus (mediaanit), pelit päivittäin, korkein taso, rauhoittumispisteiden käynnit ja ohitukset, suosituimmat lakat ja klipsit sekä esteet, joihin kompastuttiin. Palkit ovat pelkkää HTML:ää ja CSS:ää, ei kaaviokirjastoa.
@@ -160,7 +160,7 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 
 | Reitti | Tehtävä | Rajat |
 |---|---|---|
-| `POST /api/scores` | tuloksen tallennus | yksi tulos per istunto (409), validointi `shared/score.ts` (400), runko enintään 1 kt |
+| `POST /api/scores` | kierroksen tulos, istunnon paras jää voimaan | yksi rivi per istunto, validointi `shared/score.ts` (400), runko enintään 1 kt; vastaus `{ best }` |
 | `GET /api/leaderboard` | 10 parasta | CloudFront-välimuisti 60 s |
 | `POST /api/events` | tapahtumaerä raw-kerrokseen | enintään 50 tapahtumaa ja 16 kt |
 
@@ -168,7 +168,7 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 
 ### Kulusuojat
 - Lambdan reserved concurrency 5.
-- Vuorokausikatot DynamoDB-laskurilla: kirjoitukset ja pyynnöt, ylitys palauttaa 429.
+- Vuorokausikatot DynamoDB-laskurilla (UTC-päivä): tulokset 2000, pistetaulukon luvut 5000, ylitys palauttaa 429. Laskuri on atominen (`ADD`), katto on ehto (`n < max`), ja rivi poistuu TTL:llä (`expires`) päivä päivän jälkeen. Rikkinäinen pyyntö hylätään ennen laskuria, joten se ei maksa kirjoitusta.
 - Syötteen validointi: koko, kentät, indeksit, pistemäärän yläraja.
 
 ## 4. Data
@@ -180,8 +180,8 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 | S3 `public/stats.json` | yöajon yhteenveto tilastosivulle | korvataan joka yö |
 
 ### Taulun rakenne
-- Taulun avain `pk`. Tulos on `SESSION#<istuntotunniste>`, joten yhdellä istunnolla voi olla vain yksi tulos: kirjoitus on ehdollinen (`attribute_not_exists(pk)`).
-- Indeksi `leaderboard` (GSI): osioavain `board` (sama arvo kaikilla tuloksilla), lajitteluavain `score`. Kymmenen parasta luetaan yhdellä Querylla laskevassa järjestyksessä, ei Scania.
+- Taulun avain `pk`. Tulos on `SESSION#<istuntotunniste>`, ja rivillä on istunnon paras kierros. Kirjoitus on ehdollinen (`attribute_not_exists(pk) OR score < :score`), joten huonompi tulos ei korvaa parempaa eikä kaksi samanaikaista pyyntöä sotke toisiaan. Laskurit: `COUNT#<reitti>#<päivä>`.
+- Indeksi `leaderboard` (GSI): osioavain `board` (sama arvo kaikilla tuloksilla), lajitteluavain `score`, projektio `INCLUDE` (vain `name`, `level`, `home`). Kymmenen parasta luetaan yhdellä Querylla laskevassa järjestyksessä, ei Scania.
 - Indeksi on harva: laskuririveillä ei ole `board`-kenttää, joten ne eivät ole indeksissä.
 - Koodi: `api/src/logic/items.ts` (rivin muoto), `api/src/store.ts` (DynamoDB-kutsut), `api/src/handler.ts` (reititys).
 
