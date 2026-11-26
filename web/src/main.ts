@@ -2,7 +2,7 @@ import './fonts';
 import { drawUnicorn } from './art/unicorn';
 import { RideScene } from './scenes/ride';
 import { HEIGHT, WIDTH, type Scene } from './scenes/scene';
-import { showLeaderboard } from './leaderboard';
+import { mountLeaderboard, refreshLeaderboard } from './leaderboard';
 import { formatName, rollName } from './logic/names';
 import { Input } from './systems/input';
 import { loadName, saveName } from './systems/storage';
@@ -43,12 +43,11 @@ drawLogo();
 // The player's name: drawn from word lists on the first visit and kept in this browser.
 // The button draws a new one. Only the word indexes are stored, never free text.
 const nameEl = document.querySelector<HTMLElement>('#player-name')!;
-const scoresEl = document.querySelector<HTMLElement>('#scores')!;
 const rerollEl = document.querySelector<HTMLButtonElement>('#reroll')!;
 function showName(name = rollName(Math.random)): void {
   saveName(name);
   nameEl.textContent = formatName(name);
-  void showLeaderboard(scoresEl);
+  refreshLeaderboard();
 }
 showName(loadName() ?? undefined);
 rerollEl.addEventListener('click', () => {
@@ -104,10 +103,12 @@ const scene: Scene = new RideScene({
     playing = false;
     document.body.classList.remove('playing');
     exitFullscreen();
-    void showLeaderboard(scoresEl);
+    refreshLeaderboard();
   },
 });
 scene.enter();
+// The leaderboard is a React island, loaded after the game is on screen.
+mountLeaderboard(document.querySelector<HTMLElement>('#leaderboard')!);
 
 // Fixed time step keeps the physics the same on every screen refresh rate.
 const STEP = 1 / 120;

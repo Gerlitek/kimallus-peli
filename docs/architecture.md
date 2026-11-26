@@ -38,7 +38,7 @@ Versio 1 on pelkkä staattinen front (S3 + CloudFront). API ja yöajo tulevat my
 - **Vektorigrafiikka koodilla:** hahmot piirretään `Path2D`:llä Bézier-käyrinä. Ei kuvatiedostoja eikä pikseligrafiikkaa.
 - **Squash and stretch** canvasin muunnoksilla (`scale`, `rotate`): hyppy venyttää, lasku litistää.
 - **Valikot, nimimerkki ja tarinatekstit DOMissa.** Teksti pysyy terävänä, saavutettavana ja helposti käännettävänä.
-- **React vain DOM-osiin, ei peliin.** Tilastosivu on React-sovellus. Pelisilmukka ja Canvas pysyvät ilman kehystä, koska React ei tuo piirtämiseen mitään. React latautuu vain sivuille, jotka sitä käyttävät.
+- **React vain DOM-osiin, ei peliin.** Tilastosivu on React-sovellus, ja pelisivun pistetaulukko on React-saari. Pelisilmukka ja Canvas pysyvät ilman kehystä, koska React ei tuo piirtämiseen mitään. React latautuu vain sivuille, jotka sitä käyttävät.
 - **Ohjaus:** välilyönti ja hiiri pöytäkoneella, napautus kosketusnäytöllä.
 
 ### Rakenne
@@ -47,6 +47,7 @@ web/
   index.html            aloitussivu: logo, ohjeet, peli, tekijätiedot, tilastot- ja lähdekoodilinkit, tietosuoja
   tilastot/index.html   tilastosivu (lukee stats.json:n)
   src/
+    leaderboard/        pistetaulukko: rows.ts (haku, järjestys), store.ts (silta peliin), Leaderboard.tsx, index.ts (laiska lataus)
     stats/              tilastosivu Reactilla: summary.ts (puhtaat funktiot), useSummary.ts (haku), StatsPage.tsx, BarCard.tsx
     main.ts             käynnistys, pelisilmukka (requestAnimationFrame, kiinteä aika-askel)
     art/                palette.ts, shapes.ts (blob, sydän, tähti), cat.ts, unicorn.ts, props.ts
@@ -149,7 +150,7 @@ Peli ei koskaan odota verkkoa. Jos API ei vastaa, peli jatkuu ja taulu näyttä�
 ### Pistetaulukko ja tilastosivu ennen APIa
 Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. Kierroksen päätyttyä peli lähettää tuloksen (`submitScore`, `leaderboard.ts`) istuntotunnisteen kanssa; mitään ei odoteta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
 
-- **Pistetaulukko** (`leaderboard.ts`, pelin alla): kymmenen parasta riviä palvelimelta (`GET /api/leaderboard`) ja oma paras korostettuna oikealla sijallaan. Rivi on `{ name: [indeksit], score, level, home }`; taso näkyy tähtinä ja kotiin pääsy talona. Ilman APIa näkyy vain tämän laitteen paras tulos. Palvelimelta tulleet rivit validoidaan (nimi-indeksit, numerot) ennen näyttämistä.
+- **Pistetaulukko** (`src/leaderboard/`, pelin alla, React-saari): kymmenen parasta riviä palvelimelta (`GET /api/leaderboard`) ja oma paras korostettuna oikealla sijallaan. Rivi on `{ name: [indeksit], score, level, home }`; taso näkyy tähtinä ja kotiin pääsy talona. Ilman APIa näkyy vain tämän laitteen paras tulos. Palvelimelta tulleet rivit validoidaan (nimi-indeksit, numerot) ennen näyttämistä. Peli ei ole React-sovellus: se kutsuu vain `refreshLeaderboard()`ia, kun nimi vaihtuu tai kierros päättyy. Pieni store (`store.ts`) pitää oman parhaan ja kierrosnumeron, ja komponentti lukee sen `useSyncExternalStore`illa. React ja komponentti ladataan dynaamisella importilla vasta, kun peli on ruudulla, joten pelin oma bundle ei kasva eikä ensimmäinen ruutu odota Reactia.
 - **Tilastosivu** (`src/stats/`, `tilastot/`, React): piirtää yöajon yhteenvedon (`stats.json` sivuston juuressa, tyyppi `Summary`): pelikerrat, pelaajat, kotiin päässeet, kesto ja kimallus (mediaanit), pelit päivittäin, korkein taso, rauhoittumispisteiden käynnit ja ohitukset, suosituimmat lakat ja klipsit sekä esteet, joihin kompastuttiin. Palkit ovat pelkkää HTML:ää ja CSS:ää, ei kaaviokirjastoa. Luvut muutetaan korteiksi puhtailla funktioilla (`summary.ts`), joten ne testataan ilman selainta; komponentit vain piirtävät. Haku on omassa hookissaan (`useSummary`), joka keskeyttää pyynnön, kun komponentti poistuu. Sivun otsikko on staattista HTML:ää, joten se näkyy myös ilman JavaScriptiä.
 - **Esimerkkidata:** osoitteen perään `?demo` näyttää keksityt rivit ja luvut (`stats/demo.ts`), ja sivulla lukee selvästi, että ne ovat esimerkkejä.
 
