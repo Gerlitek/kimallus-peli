@@ -36,6 +36,7 @@ import { gapAfter, pickObstacle } from '../logic/spawn';
 import type { Input } from '../systems/input';
 import { LumenOrbs } from '../systems/lumens';
 import { Particles } from '../systems/particles';
+import { submitScore } from '../leaderboard';
 import { loadBest, saveBest } from '../systems/storage';
 import { HomeMoment } from './home-moment';
 import { ManeStation } from './mane-station';
@@ -510,6 +511,7 @@ export class RideScene implements Scene {
     const score = this.score;
     // Reaching home is part of the best run, so it is written again with that mark.
     if (home && score >= this.saved) saveBest({ score, level: this.level + 1, home });
+    submitScore({ score, level: this.level + 1, home });
     const record = score > this.best;
     if (record) {
       this.best = score;

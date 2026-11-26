@@ -135,7 +135,7 @@ Miljöö: pinkki, kimalteleva tähtimaailma ja asteroidit. Termi *stellar* (lois
 ### Nimimerkit
 Pitkät söpöt nimet yhdistellään sanalistoista (sydän, tähti, yksisarvinen, sateenkaari …). Nimi tallennetaan **sanalistojen indekseinä**, ei vapaana tekstinä. Palvelin hyväksyy vain kelvolliset indeksit, joten julkiseen tauluun ei voi kirjoittaa mitä tahansa. Sanalistat ovat jaetussa `shared/`-paketissa.
 
-Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (kuvaileva sana, kahden teemasanan yhdyssana, hahmo). Nimessä on aina kolme sanaa, jotta sen voi lukea lapselle ja muistaa; ei numeroita. Yhdistelmiä on 228 000 (30 × 20 × 19 × 20), joten sama nimi osuu kahdelle harvoin, ja rivit erotetaan joka tapauksessa istuntotunnisteella. Uudet sanat lisätään listan loppuun, koska tallennetut nimet ovat indeksejä. Se arvotaan ensimmäisellä käynnillä, tallentuu selaimeen indekseinä ja näkyy pelin yläpuolella; "Arvo uusi" arpoo toisen. Listat ovat toistaiseksi tiedostossa `web/src/data/names.ts` ja säännöt tiedostossa `web/src/logic/names.ts`; ne siirtyvät `shared/`-pakettiin, kun API tulee.
+Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (kuvaileva sana, kahden teemasanan yhdyssana, hahmo). Nimessä on aina kolme sanaa, jotta sen voi lukea lapselle ja muistaa; ei numeroita. Yhdistelmiä on 228 000 (30 × 20 × 19 × 20), joten sama nimi osuu kahdelle harvoin, ja rivit erotetaan joka tapauksessa istuntotunnisteella. Uudet sanat lisätään listan loppuun, koska tallennetut nimet ovat indeksejä. Se arvotaan ensimmäisellä käynnillä, tallentuu selaimeen indekseinä ja näkyy pelin yläpuolella; "Arvo uusi" arpoo toisen. Listat ja kelpoisuussääntö ovat `shared/`-paketissa (`words.ts`, `names.ts`), jota sekä frontti että API käyttävät; arvonta on tiedostossa `web/src/logic/names.ts`.
 
 ### Tila selaimessa
 - `localStorage`: nimimerkki (indekseinä) ja paras kierros (`{ score, level, home }`: kimallus, saavutettu taso, pääsikö kotiin). Luku ja kirjoitus `try/catch`issa.
@@ -145,7 +145,7 @@ Tehty selaimen puolella: nimi on muotoa "Säihkyvä Tähtisydän Yksisarvinen" (
 Peli ei koskaan odota verkkoa. Jos API ei vastaa, peli jatkuu ja taulu näyttää paikalliset tulokset.
 
 ### Pistetaulukko ja tilastosivu ennen APIa
-Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
+Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. Kierroksen päätyttyä peli lähettää tuloksen (`submitScore`, `leaderboard.ts`) istuntotunnisteen kanssa; mitään ei odoteta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
 
 - **Pistetaulukko** (`leaderboard.ts`, pelin alla): kymmenen parasta riviä palvelimelta (`GET /api/leaderboard`) ja oma paras korostettuna oikealla sijallaan. Rivi on `{ name: [indeksit], score, level, home }`; taso näkyy tähtinä ja kotiin pääsy talona. Ilman APIa näkyy vain tämän laitteen paras tulos. Palvelimelta tulleet rivit validoidaan (nimi-indeksit, numerot) ennen näyttämistä.
 - **Tilastosivu** (`stats.ts`, `tilastot/`): piirtää yöajon yhteenvedon (`stats.json` sivuston juuressa, tyyppi `Summary`): pelikerrat, pelaajat, kotiin päässeet, kesto ja kimallus (mediaanit), pelit päivittäin, korkein taso, rauhoittumispisteiden käynnit ja ohitukset, suosituimmat lakat ja klipsit sekä esteet, joihin kompastuttiin. Palkit ovat pelkkää HTML:ää ja CSS:ää, ei kaaviokirjastoa.
@@ -160,24 +160,31 @@ Yksi Lambda (Node.js, TypeScript), paketointi CDK:n `NodejsFunction`illa (esbuil
 
 | Reitti | Tehtävä | Rajat |
 |---|---|---|
-| `POST /api/scores` | tuloksen tallennus | yksi tulos per istunto, pistemäärän järkevyystarkistus |
-| `GET /api/leaderboard` | 20 parasta | CloudFront-välimuisti 60 s |
+| `POST /api/scores` | kierroksen tulos, istunnon paras jää voimaan | yksi rivi per istunto, validointi `shared/score.ts` (400), runko enintään 1 kt; vastaus `{ best }` |
+| `GET /api/leaderboard` | 10 parasta | CloudFront-välimuisti 60 s |
 | `POST /api/events` | tapahtumaerä raw-kerrokseen | enintään 50 tapahtumaa ja 16 kt |
 
 **Lambda Function URL CloudFrontin takana (OAC)**, ei API Gatewayta: Function URL on ilmainen, eikä HTTP API:n ilmaisosuus jatku 12 kk:n jälkeen.
 
 ### Kulusuojat
 - Lambdan reserved concurrency 5.
-- Vuorokausikatot DynamoDB-laskurilla: kirjoitukset ja pyynnöt, ylitys palauttaa 429.
+- Vuorokausikatot DynamoDB-laskurilla (UTC-päivä): tulokset 2000, pistetaulukon luvut 5000, ylitys palauttaa 429. Laskuri on atominen (`ADD`), katto on ehto (`n < max`), ja rivi poistuu TTL:llä (`expires`) päivä päivän jälkeen. Rikkinäinen pyyntö hylätään ennen laskuria, joten se ei maksa kirjoitusta.
 - Syötteen validointi: koko, kentät, indeksit, pistemäärän yläraja.
+- Uskottavuus (`shared/score.ts`): pisteet enintään 5000, kotiin pääsy vain viimeiseltä tasolta, ja tasolla on vähimmäispisteet, jotka radan pituus antaa (taso 2: 70, taso 3: 110, koti: 200). Testi `web/test/score-rules.test.ts` sitoo luvut tasoihin. Säännöt pysäyttävät huolimattoman väärennöksen, eivät huolellista: peli pyörii selaimessa. Omituisen rivin omistaja poistaa taulusta käsin.
 
 ## 4. Data
 
 | Säilö | Sisältö | Elinkaari |
 |---|---|---|
-| DynamoDB, yksi taulu, provisioitu Standard (5 RCU / 5 WCU) | pisteet, vuorokausilaskurit | pisteet pysyvät, laskurit TTL:llä |
+| DynamoDB, yksi taulu ja yksi indeksi, provisioitu Standard (kumpikin 5 RCU / 5 WCU) | pisteet, vuorokausilaskurit | pisteet pysyvät, laskurit TTL:llä |
 | S3 `raw/` | tapahtumat NDJSON:na, `raw/yyyy/mm/dd/` | poisto 30 vrk |
 | S3 `public/stats.json` | yöajon yhteenveto tilastosivulle | korvataan joka yö |
+
+### Taulun rakenne
+- Taulun avain `pk`. Tulos on `SESSION#<istuntotunniste>`, ja rivillä on istunnon paras kierros. Kirjoitus on ehdollinen (`attribute_not_exists(pk) OR score < :score`), joten huonompi tulos ei korvaa parempaa eikä kaksi samanaikaista pyyntöä sotke toisiaan. Laskurit: `COUNT#<reitti>#<päivä>`.
+- Indeksi `leaderboard` (GSI): osioavain `board` (sama arvo kaikilla tuloksilla), lajitteluavain `score`, projektio `INCLUDE` (vain `name`, `level`, `home`). Kymmenen parasta luetaan yhdellä Querylla laskevassa järjestyksessä, ei Scania.
+- Indeksi on harva: laskuririveillä ei ole `board`-kenttää, joten ne eivät ole indeksissä.
+- Koodi: `api/src/logic/items.ts` (rivin muoto), `api/src/store.ts` (DynamoDB-kutsut), `api/src/handler.ts` (reititys).
 
 Yöajo (EventBridge Scheduler → Lambda) lukee edellisen päivän raw-tiedostot ja päivittää `stats.json`:n. Tilastosivu lukee sen suoraan CloudFrontista ilman Lambdaa.
 
