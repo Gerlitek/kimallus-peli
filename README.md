@@ -2,43 +2,45 @@
 
 [![web](https://github.com/Gerlitek/kimallus-peli/actions/workflows/web.yml/badge.svg)](https://github.com/Gerlitek/kimallus-peli/actions/workflows/web.yml)
 
-> **In English:** *Kimallus* ("sparkle" in Finnish) is a small, very pink browser game: a cat rides a unicorn through a sparkly galaxy, jumping over diamonds and rainbows. Vector art drawn in code (Canvas 2D, no game engine), TypeScript, hosted on AWS (CDK). Docs are in Finnish; code and commits in English. *Work in progress: playable locally, AWS deployment coming.*
+> **Suomeksi:** Kimallus on pinkki selainpeli leikki-ikäisille: kissa ratsastaa yksisarvisella tähtimaailmassa ja hyppii timanttien ja sateenkaarten yli. TypeScript, Canvas 2D ja React, julkaisu AWS:ään (Terraform, CDK). Pelattavissa osoitteessa [kimallus.gerlitek.fi](https://kimallus.gerlitek.fi).
 
-**Tila:** kehityksessä. Peli toimii paikallisesti (`npm run dev`). AWS-julkaisu osoitteeseen kimallus.gerlitek.fi tulee myöhemmin.
+*Kimallus* ("sparkle") is a very pink browser game for young children: a cat rides a unicorn through a sparkly star world, jumping over gems and rainbows. Vector art drawn in code (Canvas 2D, no game engine), TypeScript, React for the stats page and the leaderboard. The game is in Finnish; inside the game everything is told with pictures, since the players cannot read yet.
 
-Söpö selainpeli: kissa ratsastaa yksisarvisella pinkissä tähtimaailmassa ja hyppii timanttien ja sateenkaarten yli.
+**Status:** live at [kimallus.gerlitek.fi](https://kimallus.gerlitek.fi), served from an interim web host. In development: the AWS part (Terraform baseline, CDK app on S3, CloudFront, Lambda and DynamoDB) is not deployed yet, and the score API runs locally against DynamoDB Local until then.
 
-## Kehitys
+## Development
 
 ```bash
 npm install
-npm run dev     # peli osoitteessa http://localhost:5173
+npm run dev     # game at http://localhost:5173
 npm test        # Vitest
 npm run build
 ```
 
-Pistetaulukko paikallisesti (Docker), kolmessa päätteessä:
+The leaderboard locally (Docker), in three terminals:
 
 ```bash
-npm run db          # DynamoDB Local, tyhjä joka käynnistyksellä
-npm run dev:api     # API osoitteessa http://localhost:3001, luo taulun
-npm run dev:online  # peli, /api ohjataan paikalliseen API:in
+npm run db          # DynamoDB Local, empty on every start
+npm run dev:api     # API at http://localhost:3001, creates the table
+npm run dev:online  # game, /api forwarded to the local API
 ```
 
-Ohjaus: välilyönti, nuoli ylös, hiiri tai napautus. Pidä pohjassa, niin hyppy on korkeampi.
+Example data: add `?demo` to the address of the game or the stats page (`/tilastot/?demo`).
 
-## Dokumentit
+Controls: space, arrow up, mouse or tap. Hold for a higher jump.
 
-- `docs/architecture.md`: arkkitehtuuri ja päätökset
-- `kustannukset.md`: kustannussuunnitelma
-- `AWS.md`: tarkistuslista AWS-työhön
+## Documents
 
-## Rakenne
+- `docs/architecture.md`: architecture and decisions
+- `costs.md`: cost plan
+- `AWS.md`: checklist for the AWS work
 
-| Kansio | Sisältö |
+## Structure
+
+| Folder | Content |
 |---|---|
-| `web/` | Peli: Vite, TypeScript, Canvas 2D |
-| `api/` | Pisteiden API: yksi Lambda-käsittelijä, DynamoDB |
-| `shared/` | Frontin ja API:n yhteinen koodi: sanalistat, validointi |
-| `docs/` | Dokumentit |
-| `.github/workflows/` | CI: testit ja build jokaisesta pushista |
+| `web/` | The game (Vite, TypeScript, Canvas 2D) and the stats page (React) |
+| `api/` | Score API: one Lambda handler, DynamoDB |
+| `shared/` | Code shared by the front and the API: word lists, validation |
+| `docs/` | Documents |
+| `.github/workflows/` | CI: tests and build on every push; deploy started by hand and approved |

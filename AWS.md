@@ -1,74 +1,77 @@
-# AWS-suunnitelma ja tarkistuslista
+# AWS plan and checklist
 
-Rastita kohdat työn edetessä. Kustannukset: `kustannukset.md`.
+Tick the items as the work goes on. Costs: `costs.md`.
 
-## 0. Ennen kuin mitään tehdään
-- [ ] Root-tilille MFA, rootia ei käytetä arkeen
-- [ ] Oma käyttäjä työskentelyyn (IAM Identity Center tai IAM)
-- [ ] Budgets: hälytykset 2 $, 4 $ ja 6 $ (toteuma ja ennuste)
-- [ ] Cost Anomaly Detection päälle
-- [ ] Kalenterimuistutus: Free planin loppu (6 kk tilin luonnista). Päivitä Paid planiin ajoissa, muuten tili suljetaan.
-- [ ] Päivityksen päivämäärä: ______
+## 0. Before anything else
+- [ ] MFA on the root user; root is not used for daily work
+- [ ] Own user for daily work (IAM Identity Center or IAM)
+- [ ] Budgets: alerts at 2, 4 and 6 USD (actual spend)
+- [ ] Cost Anomaly Detection on (new accounts have a default monitor: check it)
+- [ ] Calendar reminder: the Free plan ends (6 months after the account was created). Upgrade to the Paid plan in time, otherwise the account is closed.
+- [ ] Upgrade date: ______
 
-## 1. Alue ja rakenne
-- [ ] Valittu yksi region (esim. `eu-north-1`): ______
-- [ ] Tarkistettu, että käytetyt palvelut ovat regionissa
-- [ ] CloudFront-varmenne (ACM) `us-east-1`:ssä, jos oma domain
-- [ ] Domain: CloudFrontin oma osoite vai oma (Route 53 maksaa 0,50 $/kk)
+## 1. Region and structure
+- [x] Region chosen: `eu-north-1` (Stockholm)
+- [ ] Checked that the services used are available in the region
+- [ ] CloudFront certificate (ACM) in `us-east-1` for the custom domain
+- [x] Domain: `kimallus.gerlitek.fi` with a CNAME at the current DNS provider, no Route 53 (a hosted zone costs 0.50 USD/month)
 
-## 2. Terraform, CDK ja julkaisu
-- [ ] Terraform-pohja (`infra-bootstrap/`): state-ämpäri, budjetti, OIDC; `terraform plan` tarkistettu ennen `apply`ta
-- [ ] State siirretty S3:een (`-migrate-state`), ei `*.tfstate`-tiedostoja repossa
-- [ ] `cdk bootstrap` tehty (tarkista, ettei tuota kuluja)
-- [ ] GitHub Actions OIDC, IAM-rooli rajattu omaan repoon ja haaraan
-- [ ] Deploy-rooli voi vain ottaa käyttöön CDK:n `cdk-*`-roolit
-- [ ] Julkaisuroolilla ei pysyvää `AdministratorAccess`ia
-- [ ] `cdk diff` ennen jokaista deployta
-- [ ] Kokeilupinot poistetaan (`cdk destroy`)
-- [ ] CDK-pinon testit (`assertions`) ja Lambda-testit (Vitest)
+## 2. Terraform, CDK and deployment
+- [ ] Terraform baseline (`infra-bootstrap/`): state bucket, budget, OIDC; `terraform plan` reviewed before `apply`
+- [ ] State moved to S3 (`-migrate-state`), no `*.tfstate` files in the repo
+- [ ] `cdk bootstrap` done (check that it creates no costs)
+- [ ] GitHub Actions OIDC, IAM role limited to this repo's `production` environment
+- [x] GitHub environment `production`: owner approval required, `main` branch only
+- [x] `main` protected from force pushes and deletion (repository ruleset)
+- [ ] The deploy role can only assume CDK's `cdk-*` roles
+- [ ] No permanent `AdministratorAccess` for the deploy role
+- [ ] `cdk diff` before every deploy
+- [ ] Trial stacks removed (`cdk destroy`)
+- [ ] CDK stack tests (`assertions`) and Lambda tests (Vitest)
 
-## 3. Turvallisuus (koodi on julkista)
-- [ ] Ei avaimia, tilin ID:tä eikä `cdk.context.json`-tiedostoa repossa
-- [ ] S3 Block Public Access päällä, jakelu CloudFrontin kautta (OAC)
-- [ ] API:n CORS rajattu pelin osoitteeseen
-- [ ] Throttling ja Lambdan reserved concurrency (esim. 5)
-- [ ] Syötteen validointi palvelimella (pituus, merkit, pistemäärän järkevyys)
-- [ ] Vähimmäisoikeudet Lambdan rooleissa (vain tarvittava taulu ja ämpäri)
+## 3. Security (the code is public)
+- [ ] No keys, no account ID and no `cdk.context.json` in the repo
+- [ ] S3 Block Public Access on, delivery through CloudFront (OAC)
+- [ ] No CORS: the API is served under the game's own origin through CloudFront
+- [ ] Lambda reserved concurrency (5) and daily request caps
+- [x] Input validation on the server (size, fields, name indexes, plausible score)
+- [ ] Least privilege in Lambda roles (only the table and bucket they need)
 
-## 4. Yksityisyys (lasten peli)
-- [ ] Ei henkilötietoja: nimimerkit valmiista sanalistoista, ei vapaata tekstiä
-- [ ] Ei lasten nimiä koodissa, dokumenteissa, commit-viesteissä tai tiedostonimissä
-- [ ] `private/` gitignoressa ennen ensimmäistä committia
-- [ ] Commit-tekijänä GitHubin noreply-osoite (`git config user.email`)
-- [ ] Ei IP-osoitteiden tai evästeiden tallennusta ilman tarvetta
-- [ ] Lokien säilytys 7 vrk
-- [ ] Lyhyt tietosuojaseloste
+## 4. Privacy (a game for children)
+- [x] No personal data: player names from fixed word lists, no free text
+- [ ] No children's names in code, documents, commit messages or file names
+- [x] `private/` in `.gitignore` before the first commit
+- [ ] GitHub's noreply address as the commit author, also for merges made on github.com (Settings > Emails > Keep my email addresses private)
+- [ ] No IP addresses or cookies stored
+- [ ] Log retention 7 days
+- [ ] Short privacy notice
 
-## 5. Kustannusvartijat
-- [ ] Ei NAT Gatewayta eikä VPC:tä Lambdalle
-- [ ] DynamoDB provisioitu Standard (25 WCU / 25 RCU), ei on-demand
-- [ ] Ei EC2:ta, RDS:ää, ELB:tä, X-Raytä eikä WAF:ia
-- [ ] S3-elinkaarisääntö raw-datalle (30 vrk)
-- [ ] Cost Explorer tarkistettu viikon kuluttua ensimmäisestä deploystä
-- [ ] Kuukausitarkistus: lasku vs. arvio (tavoite alle 6 $)
+## 5. Cost guards
+- [ ] No NAT Gateway, no VPC for Lambda
+- [ ] DynamoDB provisioned Standard within the always-free 25 WCU / 25 RCU (table and index 5 each), not on-demand
+- [ ] No EC2, RDS, ELB, X-Ray or WAF
+- [ ] S3 lifecycle rule for raw data (30 days)
+- [ ] Cost Explorer checked a week after the first deploy
+- [ ] Monthly check: bill against the estimate (target under 6 USD)
 
-## 6. Dokumentaatio
-- [ ] README: arkkitehtuurikuva, kustannusarvio, perustelut
-- [ ] `docs/aws-vs-azure.md`: vertailu zombipeliin
-- [ ] Julkaisu GitHub Actionsilla, badge READMEen
+## 6. Documentation
+- [ ] README: architecture diagram, cost estimate, reasons
+- [ ] Comparison with the Azure sister project (zombie game), as a section in the README or `docs/architecture.md`
+- [x] Deployment with GitHub Actions, badge in the README
 
-## Vaiheet
-1. **Tili ja suojat:** kohta 0.
-2. **Runko:** Terraform-pohja (budjetti, OIDC), `cdk bootstrap`, CDK-pinon alku (S3, CloudFront), OIDC-julkaisu.
-3. **Staattinen peli verkossa:** kohdat 3 ja 5 tarkistetaan.
-4. **API (jos tarvitaan):** Lambda, DynamoDB, throttling, validointi.
-5. **Yöajo ja data (vapaaehtoinen):** EventBridge, S3 raw → curated.
-6. **Viimeistely:** dokumentit, yksityisyystarkistus, kustannusten tarkistus.
+## Stages
+1. **Account and guards:** section 0.
+2. **Skeleton:** Terraform baseline (budget, OIDC), `cdk bootstrap`, the first CDK stack (S3, CloudFront), OIDC deployment.
+3. **Static game online:** sections 3 and 5 checked.
+4. **API:** Lambda, DynamoDB, daily caps, validation.
+5. **Nightly job and data:** EventBridge, S3 raw → curated.
+6. **Finishing:** documents, privacy check, cost check.
 
-## Päätökset
-| Päivä | Päätös | Syy |
+## Decisions
+| Date | Decision | Reason |
 |---|---|---|
-| | CDK TypeScriptillä, Lambda TS | Yksi kieli, nopea käynnistys, tunnetuin CDK-kieli |
-| | Vektorigrafiikka, omat hahmot | Ei sekoitu zombipelin pikselityyliin |
-| 2026-11-23 | Front ensin gerlitekin webhotelliin (rsync), AWS myöhemmin | Peli verkkoon heti ilman kuluja, sama malli kuin zombipelissä |
-| 2026-11-24 | Tilin pohja Terraformilla, sovellus CDK:lla | CI:n rooli tarvitaan ennen CDK:ta, eri elinkaari, CI ei voi muuttaa omia oikeuksiaan |
+| | CDK in TypeScript, Lambda in TypeScript | one language, fast cold start, the most widely used CDK language |
+| | Vector art, own characters | does not mix with the zombie game's pixel style |
+| 2026-11-23 | Front first to the Gerlitek web host (rsync), AWS later | the game online at once without costs, the same model as in the zombie game |
+| 2026-11-24 | Account baseline in Terraform, application in CDK | the CI role is needed before CDK, different lifecycles, CI cannot change its own permissions |
+| 2026-11-26 | Region `eu-north-1`, state bucket SSE-S3, budget alerts on actual spend | closest region; SSE-S3 is free; forecast alerts at low amounts are noise |
