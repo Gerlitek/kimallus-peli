@@ -1,5 +1,5 @@
 // Made-up numbers for working on the dashboard layout (/tilastot/?demo). Clearly marked as examples on the page.
-import type { Summary } from './stats';
+import type { Summary } from './summary';
 
 export const DEMO_SUMMARY: Summary = {
   generated: '2026-11-23T02:30:00+00:00',

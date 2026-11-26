@@ -38,6 +38,7 @@ Versio 1 on pelkkä staattinen front (S3 + CloudFront). API ja yöajo tulevat my
 - **Vektorigrafiikka koodilla:** hahmot piirretään `Path2D`:llä Bézier-käyrinä. Ei kuvatiedostoja eikä pikseligrafiikkaa.
 - **Squash and stretch** canvasin muunnoksilla (`scale`, `rotate`): hyppy venyttää, lasku litistää.
 - **Valikot, nimimerkki ja tarinatekstit DOMissa.** Teksti pysyy terävänä, saavutettavana ja helposti käännettävänä.
+- **React vain DOM-osiin, ei peliin.** Tilastosivu on React-sovellus. Pelisilmukka ja Canvas pysyvät ilman kehystä, koska React ei tuo piirtämiseen mitään. React latautuu vain sivuille, jotka sitä käyttävät.
 - **Ohjaus:** välilyönti ja hiiri pöytäkoneella, napautus kosketusnäytöllä.
 
 ### Rakenne
@@ -46,6 +47,7 @@ web/
   index.html            aloitussivu: logo, ohjeet, peli, tekijätiedot, tilastot- ja lähdekoodilinkit, tietosuoja
   tilastot/index.html   tilastosivu (lukee stats.json:n)
   src/
+    stats/              tilastosivu Reactilla: summary.ts (puhtaat funktiot), useSummary.ts (haku), StatsPage.tsx, BarCard.tsx
     main.ts             käynnistys, pelisilmukka (requestAnimationFrame, kiinteä aika-askel)
     art/                palette.ts, shapes.ts (blob, sydän, tähti), cat.ts, unicorn.ts, props.ts
     data/               obstacles.ts, stations.ts, emotions.ts, story.ts, nicknames.ts
@@ -148,8 +150,8 @@ Peli ei koskaan odota verkkoa. Jos API ei vastaa, peli jatkuu ja taulu näyttä�
 Molempien ulkoasu on valmiina, ja ne toimivat ilman palvelinta. Kierroksen päätyttyä peli lähettää tuloksen (`submitScore`, `leaderboard.ts`) istuntotunnisteen kanssa; mitään ei odoteta. API:n osoite annetaan buildissa (`VITE_API_URL`, `systems/api.ts`); tyhjänä verkkoon ei oteta yhteyttä.
 
 - **Pistetaulukko** (`leaderboard.ts`, pelin alla): kymmenen parasta riviä palvelimelta (`GET /api/leaderboard`) ja oma paras korostettuna oikealla sijallaan. Rivi on `{ name: [indeksit], score, level, home }`; taso näkyy tähtinä ja kotiin pääsy talona. Ilman APIa näkyy vain tämän laitteen paras tulos. Palvelimelta tulleet rivit validoidaan (nimi-indeksit, numerot) ennen näyttämistä.
-- **Tilastosivu** (`stats.ts`, `tilastot/`): piirtää yöajon yhteenvedon (`stats.json` sivuston juuressa, tyyppi `Summary`): pelikerrat, pelaajat, kotiin päässeet, kesto ja kimallus (mediaanit), pelit päivittäin, korkein taso, rauhoittumispisteiden käynnit ja ohitukset, suosituimmat lakat ja klipsit sekä esteet, joihin kompastuttiin. Palkit ovat pelkkää HTML:ää ja CSS:ää, ei kaaviokirjastoa.
-- **Esimerkkidata:** osoitteen perään `?demo` näyttää keksityt rivit ja luvut (`stats-demo.ts`), ja sivulla lukee selvästi, että ne ovat esimerkkejä.
+- **Tilastosivu** (`src/stats/`, `tilastot/`, React): piirtää yöajon yhteenvedon (`stats.json` sivuston juuressa, tyyppi `Summary`): pelikerrat, pelaajat, kotiin päässeet, kesto ja kimallus (mediaanit), pelit päivittäin, korkein taso, rauhoittumispisteiden käynnit ja ohitukset, suosituimmat lakat ja klipsit sekä esteet, joihin kompastuttiin. Palkit ovat pelkkää HTML:ää ja CSS:ää, ei kaaviokirjastoa. Luvut muutetaan korteiksi puhtailla funktioilla (`summary.ts`), joten ne testataan ilman selainta; komponentit vain piirtävät. Haku on omassa hookissaan (`useSummary`), joka keskeyttää pyynnön, kun komponentti poistuu. Sivun otsikko on staattista HTML:ää, joten se näkyy myös ilman JavaScriptiä.
+- **Esimerkkidata:** osoitteen perään `?demo` näyttää keksityt rivit ja luvut (`stats/demo.ts`), ja sivulla lukee selvästi, että ne ovat esimerkkejä.
 
 ### Puhelin ja tabletti
 Peli toimii kosketuksella: napautus hyppää, pitkä painallus loikkaa korkealle, sydännappi ampuu. Kosketuslaitteella peli täyttää pelatessa koko ikkunan (`body.playing`), koska kaikissa laitteissa ei ole koko näytön tilaa, ja pieni ✕-nappi korvaa Esc:n. Kuvasuhde on 16:9, joten laite kannattaa pitää vaakatasossa. Tunnistus: `(hover: none) and (pointer: coarse)`.
@@ -311,6 +313,7 @@ Jokaisen vaiheen jälkeen tarkistetaan `AWS.md`:n kohdat ja Cost Explorer.
 | Vektorigrafiikka, ei pikseleitä | oma ilme, ei sekoitu aiempaan peliin |
 | Sydämet osuvat harmaisiin pilviin | ampumiselle tavoite, tunnetaito: suru → ilo |
 | Canvas 2D ilman pelimoottoria | pieni peli, kevyt ja selitettävä |
+| React tilastosivuun ja pistetaulukkoon, ei peliin (2026-11-26) | DOM-osat ovat tavallista käyttöliittymää, jossa komponentit ja hookit selkeyttävät; peli pysyy kevyenä. Myös työnäyte Reactista |
 | CDK TypeScript, Lambda Node.js | sovellus ja infra samalla kielellä, tunnetuin CDK-kieli |
 | Tilin pohja Terraformilla, sovellus CDK:lla | kanamuna-ongelma (CI:n rooli ennen CDK:ta), eri elinkaari, CI ei voi muuttaa omia oikeuksiaan; näyte kummastakin työkalusta |
 | Front ensin gerlitekiin rsyncillä, sitten S3 + CloudFront | peli verkkoon heti ilman kuluja, sama todettu malli kuin zombipelissä; AWS-työ ei viivästytä julkaisua |
