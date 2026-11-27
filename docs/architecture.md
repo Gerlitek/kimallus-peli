@@ -186,7 +186,7 @@ One Lambda (Node.js, TypeScript), bundled with CDK's `NodejsFunction` (esbuild).
 
 ### Table design
 - Table key `pk`. A score is `SESSION#<session id>`, and the row holds the session's best round. The write is conditional (`attribute_not_exists(pk) OR score < :score`), so a lower score never replaces a higher one and two concurrent requests cannot mix up. Counters: `COUNT#<route>#<day>`.
-- Index `leaderboard` (GSI): partition key `board` (the same value on every score), sort key `score`, projection `INCLUDE` (only `name`, `level`, `home`). The top ten are read with one Query in descending order, never a Scan.
+- Index `leaderboard` (GSI): partition key `board` (the UTC year of the score), sort key `score`, projection `INCLUDE` (only `name`, `level`, `home`). The top ten are read with one Query in descending order, never a Scan. The leaderboard starts over every year: the Query reads only the current year, a session's first score of a new year replaces its old one, and score rows expire with TTL (`expires`) when their year ends. The browser's own best resets the same way.
 - The index is sparse: counter rows have no `board` attribute, so they are not in the index.
 - Code: `api/src/logic/items.ts` (row shape), `api/src/store.ts` (DynamoDB calls), `api/src/handler.ts` (routing).
 
