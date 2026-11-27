@@ -43,4 +43,4 @@ Controls: space, arrow up, mouse or tap. Hold for a higher jump.
 | `api/` | Score API: one Lambda handler, DynamoDB |
 | `shared/` | Code shared by the front and the API: word lists, validation |
 | `docs/` | Documents |
-| `.github/workflows/` | CI: tests and build on every push; deploy started by hand and approved |
+| `.github/workflows/` | CI: tests and build on every push; deploy started by hand and approved; uptime check twice a day |

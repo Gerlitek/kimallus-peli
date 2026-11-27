@@ -54,7 +54,10 @@ Tick the items as the work goes on. Costs: `costs.md`.
 - [ ] CloudFront cache key without query strings, headers or cookies, so the leaderboard cache cannot be bypassed
 - [ ] Function URL with IAM auth (OAC) only: direct calls are refused before the function runs
 - [ ] Kill switch: a CloudWatch alarm on CloudFront requests (and the budget alert) triggers a small Lambda that disables the distribution. The site stays off until the owner turns it back on.
-- [ ] Kill switch tested once on purpose, and the way back documented
+- [ ] The kill switch mails the owner itself (SNS): what was turned off, which limit was passed, how to turn it back on
+- [ ] Kill switch tested once on purpose, and the way back documented. A full shutdown: visitors see CloudFront's error page.
+- [x] Uptime check from GitHub Actions twice a day (`monitor.yml`): pages answer, certificate is renewed. A second line only: GitHub pauses schedules after 60 days without repository activity.
+- [ ] `monitor.yml` checked after the move to CloudFront (same address, certificate from ACM)
 - [ ] Find out: CloudFront flat-rate Free plan (0 USD, no overage). Open questions: is it available to this account type, and does it accept a Lambda Function URL origin? The kill switch stays either way.
 - [ ] No CloudFront access logs (they would store IP addresses)
 - [ ] Cost Explorer checked a week after the first deploy

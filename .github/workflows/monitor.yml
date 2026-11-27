@@ -1,0 +1,32 @@
+# Uptime check: is the game online, and is its certificate being renewed?
+# Runs twice a day. When a run fails, GitHub mails the owner (Settings > Notifications > Actions).
+# No secrets and no repository access: the job only reads the public site.
+# GitHub turns scheduled workflows off after 60 days without activity in the repository and mails
+# a warning first; "Enable workflow" on the Actions page turns it back on.
+name: monitor
+
+on:
+  schedule:
+    - cron: '23 5,17 * * *' # UTC, off the full hour, when GitHub's scheduler is less busy
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  SITE: kimallus.gerlitek.fi
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: The game page answers and is the game
+        # Retries ride out a short network glitch, so a mail means the site really is down.
+        run: curl --silent --show-error --fail --retry 3 --retry-delay 20 --retry-all-errors --max-time 20 "https://$SITE/" | grep -q 'id="play"'
+      - name: The stats page answers
+        run: curl --silent --show-error --fail --retry 3 --retry-delay 20 --retry-all-errors --max-time 20 --output /dev/null "https://$SITE/tilastot/"
+      - name: The certificate is valid for at least 14 more days
+        # Renewal happens about 30 days before the end, so less than 14 days left means it has failed.
+        run: |
+          echo | openssl s_client -servername "$SITE" -connect "$SITE:443" 2>/dev/null \
+            | openssl x509 -noout -checkend $((14 * 24 * 3600))
