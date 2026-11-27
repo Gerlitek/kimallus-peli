@@ -1,7 +1,7 @@
 import { ConditionalCheckFailedException, DynamoDBClient, type DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { ScoreEntry, ScoreRow } from '@kimallus/shared';
-import { BOARD, counterKey, LEADERBOARD_INDEX, scoreItem, scoreRow } from './logic/items';
+import { boardOf, counterKey, LEADERBOARD_INDEX, scoreItem, scoreRow } from './logic/items';
 
 /** Where scores are kept. The handler knows only this, so the tests run it without a database. */
 export interface Store {
@@ -35,7 +35,8 @@ export function dynamoStore(table: string, endpoint?: string): Store {
     save(entry) {
       const { pk, ...fields } = scoreItem(entry, new Date());
       const keys = Object.keys(fields);
-      // UpdateItem with a condition: create the item, or overwrite it only with a higher score.
+      // UpdateItem with a condition: create the item, or overwrite it only with a higher score
+      // (or with any score once the year has changed, since last year's best is off the board).
       // The database checks and writes in one step, so two requests at once cannot both pass.
       // Names go through #placeholders because `name`, `level` and `at` are DynamoDB reserved words.
       return conditional(
@@ -44,7 +45,7 @@ export function dynamoStore(table: string, endpoint?: string): Store {
             TableName: table,
             Key: { pk },
             UpdateExpression: `SET ${keys.map((k) => `#${k} = :${k}`).join(', ')}`,
-            ConditionExpression: 'attribute_not_exists(pk) OR #score < :score',
+            ConditionExpression: 'attribute_not_exists(pk) OR #board <> :board OR #score < :score',
             ExpressionAttributeNames: Object.fromEntries(keys.map((k) => [`#${k}`, k])),
             ExpressionAttributeValues: Object.fromEntries(keys.map((k) => [`:${k}`, fields[k as keyof typeof fields]])),
           }),
@@ -59,7 +60,7 @@ export function dynamoStore(table: string, endpoint?: string): Store {
           TableName: table,
           IndexName: LEADERBOARD_INDEX,
           KeyConditionExpression: 'board = :board',
-          ExpressionAttributeValues: { ':board': BOARD },
+          ExpressionAttributeValues: { ':board': boardOf(new Date()) },
           ScanIndexForward: false,
           Limit: limit,
         }),

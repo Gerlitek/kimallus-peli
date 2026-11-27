@@ -37,8 +37,15 @@ describe('score validation', () => {
 describe('table items', () => {
   const item = scoreItem(parseScoreEntry(valid)!, new Date('2026-11-25T18:00:00Z'));
 
-  it('keys a score by its session and puts it on the leaderboard index', () => {
-    expect(item).toEqual({ pk: `SESSION#${valid.session}`, board: 'all', name: valid.name, score: 248, level: 3, home: true, at: '2026-11-25T18:00:00.000Z' });
+  it('keys a score by its session and puts it on the leaderboard of its year', () => {
+    const { expires, ...rest } = item;
+    expect(rest).toEqual({ pk: `SESSION#${valid.session}`, board: '2026', name: valid.name, score: 248, level: 3, home: true, at: '2026-11-25T18:00:00.000Z' });
+    // The score is deleted when its year is over.
+    expect(new Date(expires * 1000).toISOString()).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  it('starts a new leaderboard at the turn of the UTC year', () => {
+    expect(scoreItem(parseScoreEntry(valid)!, new Date('2027-01-01T00:00:00Z')).board).toBe('2027');
   });
 
   it('shows only the public fields', () => {

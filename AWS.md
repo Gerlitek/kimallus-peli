@@ -51,6 +51,12 @@ Tick the items as the work goes on. Costs: `costs.md`.
 - [ ] DynamoDB provisioned Standard within the always-free 25 WCU / 25 RCU (table and index 5 each), not on-demand
 - [ ] No EC2, RDS, ELB, X-Ray or WAF
 - [ ] S3 lifecycle rule for raw data (30 days)
+- [ ] CloudFront cache key without query strings, headers or cookies, so the leaderboard cache cannot be bypassed
+- [ ] Function URL with IAM auth (OAC) only: direct calls are refused before the function runs
+- [ ] Kill switch: a CloudWatch alarm on CloudFront requests (and the budget alert) triggers a small Lambda that disables the distribution. The site stays off until the owner turns it back on.
+- [ ] Kill switch tested once on purpose, and the way back documented
+- [ ] Find out: CloudFront flat-rate Free plan (0 USD, no overage). Open questions: is it available to this account type, and does it accept a Lambda Function URL origin? The kill switch stays either way.
+- [ ] No CloudFront access logs (they would store IP addresses)
 - [ ] Cost Explorer checked a week after the first deploy
 - [ ] Monthly check: bill against the estimate (target under 6 USD)
 

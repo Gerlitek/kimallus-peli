@@ -10,13 +10,17 @@ export interface BestRun {
   home: boolean;
 }
 
+/** The leaderboard starts over every UTC year, and so does the own best. Bests saved before the year was stored are from 2026. */
+const thisYear = () => new Date().getUTCFullYear();
+const FIRST_YEAR = 2026;
+
 export function loadBest(): BestRun {
   try {
     const v: unknown = JSON.parse(localStorage.getItem(BEST_KEY) ?? '0');
     // Earlier versions stored the score alone, as a number.
-    if (typeof v === 'number' && Number.isFinite(v)) return { score: v, level: 1, home: false };
-    const run = v as Partial<BestRun> | null;
-    if (run && Number.isFinite(run.score) && Number.isFinite(run.level)) {
+    if (typeof v === 'number' && Number.isFinite(v) && thisYear() === FIRST_YEAR) return { score: v, level: 1, home: false };
+    const run = v as (Partial<BestRun> & { year?: number }) | null;
+    if (run && Number.isFinite(run.score) && Number.isFinite(run.level) && (run.year ?? FIRST_YEAR) === thisYear()) {
       return { score: Number(run.score), level: Number(run.level), home: run.home === true };
     }
   } catch {
@@ -27,7 +31,7 @@ export function loadBest(): BestRun {
 
 export function saveBest(run: BestRun): void {
   try {
-    localStorage.setItem(BEST_KEY, JSON.stringify(run));
+    localStorage.setItem(BEST_KEY, JSON.stringify({ ...run, year: thisYear() }));
   } catch {
     // Not saved; nothing else to do.
   }

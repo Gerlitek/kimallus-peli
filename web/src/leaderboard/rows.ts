@@ -1,5 +1,5 @@
 // What the leaderboard shows, without React: fetching the rows and placing the player's own best among them.
-import { TOP, type ScoreRow } from '@kimallus/shared';
+import { LEVEL_COUNT, TOP, type ScoreRow } from '@kimallus/shared';
 import { isValidName, rollName } from '../logic/names';
 import { seeded } from '../logic/random';
 import { DEMO, getJson, postJson } from '../systems/api';
@@ -25,7 +25,9 @@ export async function fetchScores(): Promise<ScoreRow[]> {
   if (DEMO) return demoRows();
   const rows = await getJson<ScoreRow[]>('/api/leaderboard');
   // Never trust what comes over the network: only well-formed rows are shown.
-  return (rows ?? []).filter((r) => isValidName(r.name) && Number.isFinite(r.score));
+  return (rows ?? []).filter(
+    (r) => isValidName(r.name) && Number.isFinite(r.score) && Number.isInteger(r.level) && r.level >= 1 && r.level <= LEVEL_COUNT,
+  );
 }
 
 export interface RankedRow {
