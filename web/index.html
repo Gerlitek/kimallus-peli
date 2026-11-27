@@ -89,6 +89,7 @@
       box-shadow: 0 6px 20px rgba(200, 40, 120, 0.45); touch-action: none;
     }
     @media (hover: none) and (pointer: coarse) { #shoot { display: block; } }
+    body.touch #shoot { display: block; }
     /* Phones and tablets: while playing, the game fills the window, letterboxed to 16:9. Best held sideways. */
     body.playing { overflow: hidden; }
     body.playing #game {
@@ -177,7 +178,7 @@
       <li><b>Jalokivet</b>: pieni hyppy riittää.</li>
       <li><b>Sateenkaaret ja timanttijoki</b>: iso loikka vie yli.</li>
       <li><b>Syömään!</b> Äidin puuro jäähtyy kulhossa: hypätään sen yli.</li>
-      <li><b>Sydän</b>: <kbd>X</kbd> tai hiiren oikea. Lähetä sydän surulliselle pilvelle, niin se ilahtuu.</li>
+      <li><b>Sydän</b>: <kbd>X</kbd>, hiiren oikea tai kosketusnäytöllä ♥-nappi oikeassa alakulmassa. Lähetä sydän surulliselle pilvelle, niin se ilahtuu.</li>
     </ol>
     <p class="player">
       <span>Pelinimesi:</span>

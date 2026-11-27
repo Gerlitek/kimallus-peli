@@ -72,8 +72,18 @@ function resize(): void {
 new ResizeObserver(resize).observe(canvas);
 resize();
 
-// Touch screens have no Esc: a small button leaves the game.
-const TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+// Touch screens have no Esc and no X key: a small button leaves the game and the heart button shoots.
+// The media query misses some touch devices (a tablet with a mouse attached, for example), so a real touch counts too.
+let touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+window.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (e.pointerType !== 'touch') return;
+    touch = true;
+    document.body.classList.add('touch');
+  },
+  { capture: true },
+);
 const input = new Input(canvas, WIDTH, HEIGHT, document.querySelector<HTMLElement>('#shoot'));
 document.querySelector<HTMLElement>('#quit')!.addEventListener('pointerdown', (e) => {
   e.preventDefault();
@@ -96,7 +106,7 @@ const scene: Scene = new RideScene({
   started: () => {
     playing = true;
     // Phones and tablets: the game fills the window (see body.playing), since not all of them have full screen.
-    document.body.classList.toggle('playing', TOUCH);
+    document.body.classList.toggle('playing', touch);
     enterFullscreen();
   },
   ended: () => {
