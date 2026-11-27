@@ -1,0 +1,7 @@
+# Copy to backend.hcl (not in the repo) after the first apply and fill in the bucket
+# from `terraform output state_bucket`. Then: terraform init -migrate-state -backend-config=backend.hcl
+bucket       = "kimallus-tfstate-<account-id>"
+key          = "infra-bootstrap/terraform.tfstate"
+region       = "eu-north-1"
+use_lockfile = true
+encrypt      = true
