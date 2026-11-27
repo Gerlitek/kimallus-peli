@@ -39,7 +39,9 @@
 ## Guards
 - Lambda reserved concurrency (5).
 - Daily request caps in the API (DynamoDB counter, 429 above the cap). They protect the database, not the request charges of CloudFront and Lambda.
-- Kill switch for the request charges: an alarm on the request count disables the CloudFront distribution without anyone watching the mail.
+- Kill switch for the request charges: an alarm on the request count disables the CloudFront distribution without anyone watching the mail. The switch mails the owner; the site stays off until turned back on. Planned, not built yet.
+- To find out: the CloudFront flat-rate Free plan (no overage charges). The kill switch stays either way.
+- No CloudFront access logs.
 - Small DynamoDB capacity works as a ceiling.
 - S3 lifecycle rule for raw data.
 - Cost Explorer weekly.

@@ -31,7 +31,7 @@ The first AWS version is the static front alone (S3 + CloudFront). The API and t
 
 **Interim hosting before AWS:** the front is published first to Gerlitek's shared web host (Apache), the same way as the sister project (zombie game): GitHub Actions, rsync over SSH, approval in the `production` environment. The game is online without AWS costs. When the web stack (S3 + CloudFront) is ready, the CNAME is pointed to CloudFront and the rsync step is removed. See section 6.
 
-**Status (2026-11-26):** the game is live on the interim host. In development: the Terraform baseline, the CDK app and the AWS deployment. The score API runs locally against DynamoDB Local until then.
+**Status (2026-11-27):** the game is live on the interim host. In development: the Terraform baseline, the CDK app and the AWS deployment. The score API runs locally against DynamoDB Local until then. An uptime check watches the live site.
 
 ## 2. Front
 
@@ -156,7 +156,7 @@ Both layouts are ready, and both work without a server. When a round ends, the g
 - **Example data:** `?demo` after the address shows made-up rows and numbers (`stats/demo.ts`), and the page says clearly that they are examples.
 
 ### Phones and tablets
-The game works by touch: a tap jumps, a long press leaps high, the heart button shoots. On a touch device the game fills the whole window while playing (`body.playing`), since not every device has full screen, and a small ✕ button replaces Esc. The aspect ratio is 16:9, so the device is best held in landscape. Detection: `(hover: none) and (pointer: coarse)`.
+The game works by touch: a tap jumps, a long press leaps high, the heart button shoots. On a touch device the game fills the whole window while playing (`body.playing`), since not every device has full screen, and a small ✕ button replaces Esc. The aspect ratio is 16:9, so the device is best held in landscape. Detection: `(hover: none) and (pointer: coarse)`, or the first real touch, since the media query misses some touch devices (a tablet with a mouse attached, for example).
 
 ## 3. API
 
@@ -175,6 +175,20 @@ One Lambda (Node.js, TypeScript), bundled with CDK's `NodejsFunction` (esbuild).
 - Daily caps with a DynamoDB counter (UTC day): 2000 scores, 5000 leaderboard reads; above the cap the API answers 429. The counter is atomic (`ADD`), the cap is a condition (`n < max`), and the row expires with TTL (`expires`) the day after. A malformed request is rejected before the counter, so it costs no write.
 - Input validation: size, fields, indexes, maximum score.
 - Plausibility (`shared/score.ts`): at most 5000 points, home only from the last level, and each level has the minimum score that the track length gives (level 2: 70, level 3: 110, home: 200). The test `web/test/score-rules.test.ts` ties the numbers to the levels. The rules stop a careless fake, not a careful one: the game runs in the browser. The owner removes an odd row by hand.
+- The daily caps protect the database only. A request that is refused is still billed by CloudFront and Lambda, and a budget only notifies. The kill switch below is the guard for that.
+- CloudFront cache key without query strings, headers or cookies, so the leaderboard cache cannot be bypassed. No CloudFront access logs, since they would store IP addresses.
+
+### Kill switch (planned, with the web stack)
+The site must be safe to leave online without anyone watching for cost mail.
+
+- A CloudWatch alarm on the CloudFront request count triggers a small Lambda that disables the distribution. The budget alert is a slower second trigger, since billing data arrives hours late.
+- A full shutdown: visitors see CloudFront's error page, and the site stays off until the owner turns it back on. A "paused" page would keep serving, and billing, requests.
+- The switch mails the owner itself through SNS: what was turned off, which limit was passed and how to turn it back on.
+- Tested once on purpose before it is relied on.
+- To settle when it is built: the request limit; CloudFront metrics are in `us-east-1`, so the alarm lives there; the budget is in Terraform and the switch in CDK; a later deploy must not turn a tripped distribution back on by accident.
+- Not guaranteed to be instant: the alarm and disabling the distribution each take minutes.
+
+Open question: the CloudFront flat-rate Free plan (0 USD, no overage charges). Is it available to this account type, and does it accept a Lambda Function URL origin? The kill switch is built either way.
 
 ## 4. Data
 
@@ -236,7 +250,7 @@ infra/
   bin/app.ts
   lib/
     cert-stack.ts         ACM certificate in us-east-1               (only for a custom domain)
-    web-stack.ts          S3, CloudFront, OAC
+    web-stack.ts          S3, CloudFront, OAC, kill switch
     api-stack.ts          Lambda, Function URL, DynamoDB, raw bucket
     jobs-stack.ts         EventBridge Scheduler, curate Lambda
   test/                   stack tests (aws-cdk-lib/assertions)
@@ -255,6 +269,7 @@ infra/
 | Workflow | Steps |
 |---|---|
 | `web.yml` | type check, Vitest, build; when started by hand, approval and rsync to the web host (interim) |
+| `monitor.yml` | twice a day: the game and stats pages answer, the certificate has at least 14 days left; a failed run mails the owner |
 | `api.yml` (planned) | lint, test |
 | `infra.yml` (planned) | `cdk synth`, tests, `cdk diff` on pull requests, deploy from main behind approval (GitHub environment) |
 | `bootstrap.yml` (planned) | `terraform fmt -check` and `terraform validate`, no AWS credentials; `apply` only from the owner's machine |
@@ -266,6 +281,7 @@ Practices from the sister project:
 - Actions are pinned to a commit SHA, not a tag.
 - A running deploy is never cancelled (`concurrency`).
 - `main` cannot be force-pushed or deleted (repository ruleset).
+- The uptime check is a second line only: GitHub pauses scheduled workflows after 60 days without repository activity. The cost guards do not depend on it.
 - Account-level resources (budget, OIDC role, state bucket) are applied by the owner with Terraform after reviewing `terraform plan`.
 
 ### Interim: publishing to the web host
@@ -328,3 +344,5 @@ After each stage the items in `AWS.md` and Cost Explorer are checked.
 ## 10. Open questions
 
 - Figure play: in or out (amount of work).
+| A kill switch disables the whole distribution and mails the owner (2026-11-27) | request charges have no cap otherwise, and nobody is expected to watch for cost mail |
+| The leaderboard starts over every UTC year, old scores are deleted (2026-11-27) | only what is shown is kept; the table stays small. History would be a longer TTL, decided before rows are deleted |

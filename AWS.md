@@ -84,3 +84,6 @@ Tick the items as the work goes on. Costs: `costs.md`.
 | 2026-11-23 | Front first to the Gerlitek web host (rsync), AWS later | the game online at once without costs, the same model as in the zombie game |
 | 2026-11-24 | Account baseline in Terraform, application in CDK | the CI role is needed before CDK, different lifecycles, CI cannot change its own permissions |
 | 2026-11-26 | Region `eu-north-1`, state bucket SSE-S3, budget alerts on actual spend | closest region; SSE-S3 is free; forecast alerts at low amounts are noise |
+| 2026-11-27 | Own kill switch: full shutdown of the distribution, the switch mails the owner | request charges need a cap that works without anyone watching |
+| 2026-11-27 | Leaderboard per UTC year, old scores deleted by TTL | only what is shown is kept |
+| 2026-11-27 | Uptime check from GitHub Actions twice a day | free, no secrets; a second line next to the kill switch |
