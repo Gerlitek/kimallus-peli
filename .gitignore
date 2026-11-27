@@ -29,3 +29,4 @@ kimallus_deploy*
 *.tfvars
 backend.hcl
 crash.log
+*_override.tf

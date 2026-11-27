@@ -87,3 +87,5 @@ Tick the items as the work goes on. Costs: `costs.md`.
 | 2026-11-27 | Own kill switch: full shutdown of the distribution, the switch mails the owner | request charges need a cap that works without anyone watching |
 | 2026-11-27 | Leaderboard per UTC year, old scores deleted by TTL | only what is shown is kept |
 | 2026-11-27 | Uptime check from GitHub Actions twice a day | free, no secrets; a second line next to the kill switch |
+| 2026-11-27 | Deploy role trust on `sub` (environment `production`) and `aud`; branch limit from the GitHub environment | the standard condition; GitHub already allows only `main` in `production` |
+| 2026-11-27 | Cost Anomaly Detection checked by hand, not in Terraform | AWS creates a default monitor; a second one would duplicate it |

@@ -210,7 +210,7 @@ Events hold no personal data: a session id, the event type, the time and game va
 
 ## 5. Infrastructure as code (Terraform and CDK)
 
-Planned; neither folder is in the repo yet.
+Status: the Terraform code is in the repo and validated in CI (`bootstrap.yml`), not applied yet. The CDK app is planned.
 
 Two tools, each with its own job. The same resource is never in both.
 
@@ -234,7 +234,8 @@ infra-bootstrap/
   budget.tf        budget 6 USD/month, alerts at 2, 4 and 6 USD (actual spend)
   github-oidc.tf   OIDC provider and deploy role
   variables.tf     region, repo, alert email
-  outputs.tf       deploy role ARN (for a GitHub variable)
+  outputs.tf       deploy role ARN (for a GitHub variable), state bucket name
+  *.example        templates for terraform.tfvars and backend.hcl
 ```
 
 - Region `eu-north-1` (Stockholm). Budgets and IAM are global.
@@ -242,6 +243,23 @@ infra-bootstrap/
 - The backend bucket name is in `backend.hcl` and the variables in `terraform.tfvars`; neither is in the repo. `.terraform.lock.hcl` is in the repo.
 - The deploy role trusts only this repo's `production` environment. In GitHub, `production` requires the owner's approval and allows only the `main` branch. The role's only permission is to assume CDK's bootstrap roles (`cdk-*`); no direct permissions to resources.
 - `cdk bootstrap` (the CDKToolkit stack) stays CDK's own, since CDK expects its structure.
+- The state bucket keeps old versions for 90 days, refuses non-TLS access and has `prevent_destroy`.
+- Cost Anomaly Detection is not in Terraform: AWS creates a default monitor for new accounts, which is checked by hand.
+
+First run, by the owner:
+
+```
+cd infra-bootstrap
+cp terraform.tfvars.example terraform.tfvars        # fill in alert_email
+printf 'terraform {\n  backend "local" {}\n}\n' > backend_override.tf
+terraform init && terraform plan                    # review, then: terraform apply
+cp backend.hcl.example backend.hcl                  # bucket from: terraform output state_bucket
+rm backend_override.tf
+terraform init -migrate-state -backend-config=backend.hcl
+rm terraform.tfstate terraform.tfstate.backup       # after checking the state is in S3
+```
+
+Then `terraform output deploy_role_arn` goes to the GitHub environment `production` as the variable `AWS_DEPLOY_ROLE_ARN`.
 
 ### CDK: `infra/`
 
